@@ -1,0 +1,439 @@
+:root {
+    --bg-color: #0d1117;
+    --card-bg: rgba(22, 27, 34, 0.8);
+    --accent-color: #58a6ff;
+    --text-primary: #c9d1d9;
+    --text-secondary: #8b949e;
+    --up-color: #23d18b;
+    --down-color: #ff4560;
+    --border-color: #30363d;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Navbar Styling */
+.navbar {
+    padding: 10px 30px;
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+}
+
+.brand {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    letter-spacing: -0.5px;
+}
+
+.controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.group {
+    display: flex;
+    background: #161b22;
+    padding: 3px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    align-items: center;
+}
+
+button,
+select {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 400;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+select {
+    background: #161b22;
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+select option {
+    background: var(--bg-color);
+    color: var(--text-primary);
+}
+
+button:hover,
+select:hover {
+    color: white;
+}
+
+button.active,
+#frvp-btn.active {
+    background: var(--accent-color);
+    color: white;
+}
+
+/* Multi-Pane Layout */
+#main-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    padding: 0;
+    /* Remove padding for edge-to-edge charts */
+}
+
+.chart-pane {
+    flex: 1;
+    position: relative;
+    background: var(--bg-color);
+    border-bottom: 1px solid var(--border-color);
+    overflow: hidden;
+    min-height: 100px;
+}
+
+#price-pane {
+    flex: 3;
+}
+
+.pane-header {
+    position: absolute;
+    top: 5px;
+    left: 10px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+    /* Allow interaction with chart below except children */
+}
+
+.pane-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(13, 17, 23, 0.6);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.settings-icon {
+    font-size: 12px;
+    cursor: pointer;
+    pointer-events: auto;
+    /* Enable clicking icon */
+    opacity: 0.4;
+    transition: opacity 0.2s;
+    background: rgba(13, 17, 23, 0.6);
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.settings-icon:hover {
+    opacity: 1;
+}
+
+/* Modal Styling */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background-color: var(--bg-color);
+    margin: 5vh auto;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    width: 400px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--accent-color);
+}
+
+.close {
+    color: var(--text-secondary);
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: white;
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.setting-row label {
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.setting-row input,
+.setting-row select {
+    background: #161b22;
+    border: 1px solid var(--border-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    width: 80px;
+}
+
+.setting-row input[type="color"] {
+    width: 40px;
+    padding: 0;
+    border: none;
+    height: 24px;
+}
+
+.btn-save {
+    background: var(--accent-color);
+    color: white;
+    width: 100%;
+    padding: 10px;
+    margin-top: 20px;
+    border-radius: 6px;
+}
+
+.btn-add {
+    background: #23d18b33;
+    color: #23d18b;
+    border: 1px dashed #23d18b;
+    padding: 5px;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 4px;
+    text-align: center;
+}
+
+#price-pane {
+    flex: 3 1 300px;
+}
+
+.splitter {
+    height: 10px;
+    width: 100%;
+    cursor: row-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+
+.splitter::after {
+    content: '';
+    width: 30px;
+    height: 2px;
+    background: var(--border-color);
+    border-radius: 2px;
+    transition: all 0.2s;
+}
+
+.splitter:hover::after {
+    background: var(--accent-color);
+    width: 50px;
+}
+
+.btn-del {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.modal-subheader {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-top: 10px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Legend Styling */
+.chart-legend {
+    position: absolute;
+    top: 40px;
+    left: 10px;
+    z-index: 20;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.legend-item {
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    padding: 4px 8px;
+    border-radius: 4px;
+    pointer-events: auto;
+    width: fit-content;
+    color: var(--text-primary);
+    border-left: 4px solid transparent;
+    /* Base for the pill marker */
+}
+
+.legend-label {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.legend-value {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.legend-controls {
+    display: flex;
+    gap: 4px;
+    margin-left: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.legend-item:hover .legend-controls {
+    opacity: 1;
+}
+
+.legend-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+}
+
+.legend-btn:hover {
+    color: var(--accent-color);
+}
+
+/* Replay Toolbar */
+.replay-toolbar {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1c2128;
+    border: 1px solid #444c56;
+    border-radius: 30px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.toolbar-drag-handle {
+    color: #444c56;
+    cursor: default;
+    padding-right: 4px;
+    user-select: none;
+}
+
+.replay-toolbar button {
+    background: transparent;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.replay-toolbar button:hover {
+    background: rgba(88, 166, 255, 0.1);
+}
+
+.replay-toolbar .separator {
+    width: 1px;
+    height: 20px;
+    background: #444c56;
+}
+
+.speed-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+#replay-speed {
+    width: 80px;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}
+
+.btn-exit {
+    border: 1px solid rgba(255, 69, 96, 0.3) !important;
+}
+
+.btn-exit:hover {
+    background: rgba(255, 69, 96, 0.1) !important;
+}

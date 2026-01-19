@@ -1,0 +1,50 @@
+{
+    "indicators": {
+        "ema1": {
+            "visible": true,
+            "len": 21
+        },
+        "ema2": {
+            "visible": true,
+            "len": 9
+        },
+        "rsi": {
+            "visible": false,
+            "len": 4,
+            "smaLen": 8,
+            "showSma": false
+        },
+        "macd": {
+            "visible": false,
+            "fast": 4,
+            "slow": 6,
+            "sig": 9
+        },
+        "cvd": {
+            "visible": true,
+            "anchor": "D",
+            "refCandles": 4
+        },
+        "cmf": {
+            "visible": true,
+            "len": 5
+        },
+        "frvp": {
+            "visible": true,
+            "rows": 10,
+            "vaPct": 70,
+            "defaultRange": {
+                "start": {
+                    "h": 11,
+                    "m": 25
+                },
+                "end": {
+                    "h": 11,
+                    "m": 35
+                }
+            }
+        }
+    },
+    "default_tf": "5min",
+    "default_symbol": "NSE:TECHM-EQ"
+}

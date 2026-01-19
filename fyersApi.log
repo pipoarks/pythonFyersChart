@@ -1,0 +1,5 @@
+{"level":"ERROR","location":"[get_call:146] fyersModel","message":{"API":"/quotes","Error":{"message":"Please provide valid inputs","code":-50,"s":"error"}},"timestamp":"2026-01-15 20:53:03,162+0530","service":"FyersAPI"}
+{"level":"ERROR","location":"[get_call:146] fyersModel","message":{"API":"/quotes","Error":{"message":"Please provide valid inputs","code":-50,"s":"error"}},"timestamp":"2026-01-15 20:54:21,617+0530","service":"FyersAPI"}
+{"level":"ERROR","location":"[get_call:146] fyersModel","message":{"API":"/quotes","Error":{"message":"Please provide valid inputs","code":-50,"s":"error"}},"timestamp":"2026-01-15 20:55:13,665+0530","service":"FyersAPI"}
+{"level":"ERROR","location":"[get_call:146] fyersModel","message":{"API":"/quotes","Error":{"message":"Please provide valid inputs","code":-50,"s":"error"}},"timestamp":"2026-01-15 20:55:28,634+0530","service":"FyersAPI"}
+{"level":"ERROR","location":"[get_call:146] fyersModel","message":{"API":"/quotes","Error":{"message":"Please provide valid inputs","code":-50,"s":"error"}},"timestamp":"2026-01-15 21:00:42,549+0530","service":"FyersAPI"}

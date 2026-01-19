@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinity Pro Chart</title>
+    <!-- Lightweight Charts CDN -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Links to separate CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <div class="navbar">
+        <div class="brand">LiveTick Pro</div>
+
+        <div class="controls">
+            <!-- Symbol Selector Dropdown -->
+            <div class="group">
+                <select id="symbol-dropdown" onchange="changeSymbol(this.value)">
+                    <!-- Options will be loaded dynamically -->
+                </select>
+            </div>
+
+            <!-- Timeframe Selector -->
+            <div class="group" id="tf-selector">
+                <button onclick="changeTF('tick')" data-val="tick">Tick</button>
+                <button onclick="changeTF('5min')" class="active" data-val="5min">5m</button>
+                <button onclick="changeTF('3min')" data-val="3min">3m</button>
+                <button onclick="changeTF('1min')" data-val="1min">1m</button>
+                <button onclick="changeTF('10min')" data-val="10min">10m</button>
+                <button onclick="changeTF('15min')" data-val="15min">15m</button>
+                <button onclick="changeTF('1h')" data-val="1h">1h</button>
+            </div>
+
+            <!-- FRVP Tool -->
+            <div class="group">
+                <button id="frvp-btn" onclick="toggleFRVPTool()">FRVP</button>
+                <button id="replay-btn" onclick="toggleReplayMode()">Replay</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="replay-toolbar" class="replay-toolbar" style="display:none;">
+        <div class="toolbar-drag-handle">⋮⋮</div>
+        <button onclick="activateJumpTo()" title="Jump to point">📍 Jump To</button>
+        <div class="separator"></div>
+        <button id="replay-play-pause" onclick="togglePlayback()">▶️ Play</button>
+        <button onclick="replayStepForward()">⏭️ Step</button>
+        <div class="separator"></div>
+        <div class="speed-control">
+            <input type="range" id="replay-speed" min="0.5" max="10.0" step="0.5" value="1.0"
+                onchange="updateReplaySpeed(this.value)">
+            <span id="speed-label">1.0x</span>
+        </div>
+        <div class="separator"></div>
+        <button class="btn-exit" onclick="exitReplayMode()"><span style="color: #ff4560;">Exit Replay</span></button>
+    </div>
+
+    <div id="main-container">
+        <!-- Price & Volume Pane -->
+        <div id="price-pane" class="chart-pane">
+            <canvas id="frvp-canvas"
+                style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 10;"></canvas>
+            <div class="pane-header">
+                <span class="pane-title">Price</span>
+                <span class="settings-icon" onclick="openSettings('frvp')" style="display:none;"
+                    id="frvp-settings-icon">⚙️</span>
+            </div>
+            <div id="chart-legend" class="chart-legend"></div>
+        </div>
+
+        <!-- Draggable Splitter 1 -->
+        <div class="splitter" id="splitter-1"></div>
+
+        <!-- RSI Pane -->
+        <div id="rsi-pane" class="chart-pane">
+            <div class="pane-header">
+                <span class="pane-title">RSI</span>
+                <span class="settings-icon" onclick="openSettings('rsi')">⚙️</span>
+            </div>
+        </div>
+
+        <!-- Draggable Splitter 2 -->
+        <div class="splitter" id="splitter-2"></div>
+
+        <!-- MACD Pane -->
+
+        <div id="macd-pane" class="chart-pane">
+            <div class="pane-header">
+                <span class="pane-title">MACD</span>
+                <span class="settings-icon" onclick="openSettings('macd')">⚙️</span>
+            </div>
+        </div>
+
+        <!-- Draggable Splitter 3 -->
+        <div class="splitter" id="splitter-3"></div>
+
+        <!-- CMF Pane -->
+        <div id="cmf-pane" class="chart-pane">
+            <div class="pane-header">
+                <span class="pane-title">CMF</span>
+                <span class="settings-icon" onclick="openSettings('cmf')">⚙️</span>
+            </div>
+        </div>
+
+        <!-- Draggable Splitter 4 -->
+        <div class="splitter" id="splitter-4"></div>
+
+        <!-- CVD Pane -->
+        <div id="cvd-pane" class="chart-pane">
+            <div class="pane-header">
+                <span class="pane-title">CVD</span>
+                <span class="settings-icon" onclick="openSettings('cvd')">⚙️</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Indicator Settings</h3>
+                <span class="close" onclick="closeSettings()">&times;</span>
+            </div>
+            <div id="modal-body" class="modal-body">
+                <!-- Content generated dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-save" onclick="saveSettings()">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Link to separate JS -->
+    <script src="script.js"></script>
+
+</body>
+
+</html>
