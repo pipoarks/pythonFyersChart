@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart Launcher</title>
+    <style>
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: #161b22;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #58a6ff;
+            font-weight: 800;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 8px;
+            align-items: center;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            background: #21262d;
+            border: 1px solid #30363d;
+            transition: all 0.2s;
+            font-size: 11px;
+            font-weight: 700;
+            color: #8b949e;
+        }
+
+        .mode-btn.active {
+            background: #388bfd;
+            color: white;
+            border-color: #58a6ff;
+            box-shadow: 0 0 15px rgba(56, 139, 253, 0.3);
+        }
+
+        input,
+        select,
+        button {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            outline: none;
+        }
+
+        button.launch-btn {
+            background: #238636;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            padding: 10px 25px;
+        }
+
+        button.launch-btn:hover {
+            background: #2ea043;
+        }
+
+        button.sync-btn {
+            background: #8957e5;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            padding: 8px 15px;
+            font-size: 11px;
+            margin-bottom: 10px;
+            display: none;
+            /* Only show in watchlist mode */
+        }
+
+        button.sync-btn:hover {
+            background: #a371f7;
+        }
+
+        .popup-warning {
+            background: rgba(255, 165, 0, 0.1);
+            border: 1px solid orange;
+            color: orange;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .symbol-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            border-top: 1px solid #30363d;
+            padding-top: 20px;
+        }
+
+        .symbol-item {
+            background: #21262d;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .symbol-item:hover {
+            background: #30363d;
+            border-color: #58a6ff;
+            transform: translateY(-2px);
+        }
+
+        .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .alert-dot {
+            background: #ff4560;
+            box-shadow: 0 0 5px #ff4560;
+        }
+
+        .watch-dot {
+            background: #23d18b;
+            box-shadow: 0 0 5px #23d18b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Chart Launcher</h1>
+
+        <div id="blocker-msg" class="popup-warning">
+            <span>⚠️</span>
+            <span><strong>Popups Blocked?</strong> Look at your address bar and click <strong>"Always allow
+                    popups"</strong> for this page to open multiple charts.</span>
+        </div>
+
+        <div class="mode-selector">
+            <div id="mode-all" class="mode-btn active" onclick="setMode('all')">Full List</div>
+            <div id="mode-alerts" class="mode-btn" onclick="setMode('alerts')">Alerted 🚀</div>
+            <div id="mode-watchlist" class="mode-btn" onclick="setMode('watchlist')">My Watchlist 📝</div>
+        </div>
+
+        <div id="sync-container" style="text-align: right;">
+            <button id="sync-btn" class="sync-btn" onclick="syncWatchlist()">Update Watchlist from Alert Logs
+                🔄</button>
+        </div>
+
+        <div class="controls">
+            <div style="flex:1">
+                <label
+                    style="font-size: 11px; color: #8b949e; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Timeframe</label>
+                <select id="tf-select" style="width: 100%;">
+                    <option value="1min">1 min</option>
+                    <option value="3min">3 min</option>
+                    <option value="5min" selected>5 min</option>
+                    <option value="15min">15 min</option>
+                    <option value="1h">1 hour</option>
+                </select>
+            </div>
+            <div style="width: 80px;">
+                <label
+                    style="font-size: 11px; color: #8b949e; display: block; margin-bottom: 5px; text-transform: uppercase;">Count</label>
+                <input type="number" id="count-input" value="10" min="1" max="100"
+                    style="width: 100%; box-sizing: border-box;">
+            </div>
+            <div style="padding-top: 18px;">
+                <button class="launch-btn" onclick="launchTop()">Launch Charts</button>
+            </div>
+        </div>
+
+        <div id="status" style="margin-bottom: 12px; font-size: 13px; color: #8b949e;">Loading...</div>
+        <div class="symbol-list" id="symbol-list"></div>
+    </div>
+
+    <script>
+        let currentMode = 'all';
+        let currentSymbols = [];
+        let isLoading = false; // Prevent stacking
+
+        async function load() {
+            if (isLoading) return; // Skip if already loading
+            isLoading = true;
+
+            let endpoint = 'http://127.0.0.1:5000/symbols';
+            if (currentMode === 'alerts') endpoint = 'http://127.0.0.1:5000/alerted_symbols';
+            else if (currentMode === 'watchlist') endpoint = 'http://127.0.0.1:5000/watchlist';
+
+            const statusEl = document.getElementById('status');
+            const listEl = document.getElementById('symbol-list');
+            const syncBtn = document.getElementById('sync-btn');
+
+            syncBtn.style.display = currentMode === 'watchlist' ? 'inline-block' : 'none';
+
+            try {
+                const resp = await fetch(endpoint);
+                currentSymbols = await resp.json();
+
+                if (currentMode === 'all') {
+                    statusEl.innerText = `${currentSymbols.length} Symbols in watchlist.`;
+                } else if (currentMode === 'alerts') {
+                    statusEl.innerText = `${currentSymbols.length} Alerted symbols today.`;
+                } else {
+                    statusEl.innerText = `${currentSymbols.length} Symbols in your manual watchlist.`;
+                }
+
+                listEl.innerHTML = '';
+                currentSymbols.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = 'symbol-item';
+                    let dot = '';
+                    if (currentMode === 'alerts') dot = '<span class="dot alert-dot"></span>';
+                    if (currentMode === 'watchlist') dot = '<span class="dot watch-dot"></span>';
+
+                    div.innerHTML = `${dot}${s.symbol.split(':')[1] || s.symbol}`;
+                    div.onclick = () => openChart(s.symbol);
+                    listEl.appendChild(div);
+                });
+            } catch (e) {
+                statusEl.innerText = "Error: Check if server.py is running!";
+                console.error(e);
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        async function syncWatchlist() {
+            if (isLoading) return;
+            const btn = document.getElementById('sync-btn');
+            const statusEl = document.getElementById('status');
+            try {
+                btn.disabled = true;
+                btn.innerText = "Syncing...";
+                const resp = await fetch('http://127.0.0.1:5000/sync_watchlist', { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) {
+                    statusEl.innerText = `Successfully synced ${data.count} symbols to config.json!`;
+                    // Immediately load after sync
+                    isLoading = false;
+                    await load();
+                } else {
+                    alert("Sync Error: " + data.error);
+                }
+            } catch (e) {
+                alert("Sync Failed: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Update Watchlist from Alert Logs 🔄";
+            }
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`mode-${mode}`).classList.add('active');
+            load();
+        }
+
+        function openChart(sym) {
+            const tf = document.getElementById('tf-select').value;
+            window.open(`index.html?symbol=${sym}&tf=${tf}`, '_blank');
+        }
+
+        function launchTop() {
+            const count = parseInt(document.getElementById('count-input').value);
+            const tf = document.getElementById('tf-select').value;
+
+            if (currentSymbols.length === 0) {
+                alert("No symbols to launch!");
+                return;
+            }
+
+            let blocked = false;
+            const toLaunch = Math.min(count, currentSymbols.length);
+
+            for (let i = 0; i < toLaunch; i++) {
+                const sym = currentSymbols[i].symbol;
+                const win = window.open(`index.html?symbol=${sym}&tf=${tf}`, '_blank');
+                if (!win || win.closed || typeof win.closed === 'undefined') {
+                    blocked = true;
+                }
+            }
+
+            if (blocked) {
+                document.getElementById('blocker-msg').classList.add('active');
+                document.getElementById('blocker-msg').style.background = 'rgba(255, 69, 96, 0.2)';
+                document.getElementById('blocker-msg').style.borderColor = '#ff4560';
+                document.getElementById('blocker-msg').innerHTML = '<strong>❌ Popups Blocked!</strong> Please click the icon in your address bar and select <strong>"Always allow popups"</strong> for this page.';
+            }
+        }
+
+        load();
+        setInterval(() => load(), 30000); 
+    </script>
+</body>
+
+</html>

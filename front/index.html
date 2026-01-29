@@ -20,10 +20,9 @@
 
         <div class="controls">
             <!-- Symbol Selector Dropdown -->
-            <div class="group">
-                <select id="symbol-dropdown" onchange="changeSymbol(this.value)">
-                    <!-- Options will be loaded dynamically -->
-                </select>
+            <div class="search-dropdown-container">
+                <input type="text" id="symbol-search" placeholder="Search Symbol..." autocomplete="off">
+                <div id="symbol-results" class="search-results"></div>
             </div>
 
             <!-- Timeframe Selector -->
@@ -40,6 +39,7 @@
             <!-- FRVP Tool -->
             <div class="group">
                 <button id="frvp-btn" onclick="toggleFRVPTool()">FRVP</button>
+                <button id="range-btn" onclick="toggleRangeTool()">Range</button>
                 <button id="replay-btn" onclick="toggleReplayMode()">Replay</button>
             </div>
         </div>

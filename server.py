@@ -4,11 +4,17 @@ import json
 import os
 
 # Import our new core modules
-from core.data_provider import fetch_raw_ticks
+# from core.data_provider import fetch_1min_candles
+from core.candle_data_provider import fetch_1min_candles
 from core.indicator_engine import get_processed_candles
 from indicators.frvp import calculate_frvp, get_best_resolution
 import pandas as pd
 import numpy as np
+import time
+
+# Simple TTL Cache for processed candles
+processed_cache = {} # { (symbol, tf, ...): (timestamp, data) }
+CACHE_TTL = 2 # 2 seconds cache is enough for 3s refresh
 
 app = Flask(__name__)
 CORS(app)
@@ -21,6 +27,65 @@ def get_symbols_list():
         with open(SYMBOLS_PATH, "r") as f:
             return jsonify(json.load(f))
     return jsonify([])
+
+@app.route("/alerted_symbols")
+def get_alerted_symbols():
+    import datetime, re
+    today_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    log_file = f"logs/alerts_{today_str}.log"
+    symbols = set()
+    
+    if os.path.exists(log_file):
+        with open(log_file, "r", encoding="utf-8") as f:
+            content = f.read()
+            # Match 🚀 [ALERT TYPE] NSE:SYMBOL (TF)
+            matches = re.findall(r"🚀 \[.*?\] (NSE:[\w-]+)", content)
+            symbols = sorted(list(set(matches)))
+            
+    result = [{"symbol": sym, "name": sym.split(':')[1] if ':' in sym else sym} for sym in symbols]
+    return jsonify(result)
+
+@app.route("/watchlist")
+def get_watchlist():
+    config_path = "config.json"
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            config = json.load(f)
+            watchlist = config.get("watchlist", [])
+            result = [{"symbol": sym, "name": sym.split(':')[1] if ':' in sym else sym} for sym in watchlist]
+            return jsonify(result)
+    return jsonify([])
+
+@app.route("/sync_watchlist", methods=["POST"])
+def sync_watchlist():
+    import datetime, re
+    today_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    log_file = f"logs/alerts_{today_str}.log"
+    config_path = "config.json"
+    
+    new_symbols = set()
+    if os.path.exists(log_file):
+        # Using a more efficient line-by-line read for large logs
+        with open(log_file, "r", encoding="utf-8") as f:
+            for line in f:
+                # Find all occurrences in the current line
+                matches = re.findall(r"NSE:[\w-]+-EQ", line)
+                for sym in matches:
+                    new_symbols.add(sym)
+    
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            config = json.load(f)
+        
+        # Sort for consistency
+        config["watchlist"] = sorted(list(new_symbols))
+        
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=4)
+            
+        return jsonify({"success": True, "count": len(new_symbols), "symbols": list(new_symbols)})
+    
+    return jsonify({"success": False, "error": "config.json not found"})
 
 @app.route("/config")
 def get_config():
@@ -37,7 +102,6 @@ def candles():
     anchor = request.args.get("anchor", "D")
     intrabar_tf = request.args.get("intrabar_tf") 
     
-    # New Indicator Settings
     rsi_len = int(request.args.get("rsi_len", 14))
     rsi_sma_len = request.args.get("rsi_sma_len")
     rsi_sma_len = int(rsi_sma_len) if rsi_sma_len and rsi_sma_len != 'null' else None
@@ -55,8 +119,17 @@ def candles():
     cmf_len = request.args.get("cmf_len")
     cmf_len = int(cmf_len) if cmf_len and cmf_len != 'null' else 20
     
+    # Cache key
+    cache_key = (symbol, tf, anchor, intrabar_tf, rsi_len, rsi_sma_len, macd_fast, macd_slow, macd_sig, ema1_len, ema2_len, cmf_len)
+    
+    now = time.time()
+    if cache_key in processed_cache:
+        timestamp, cached_data = processed_cache[cache_key]
+        if now - timestamp < CACHE_TTL:
+            return jsonify(cached_data)
+
     # 1. Fetch raw data using the Data Provider
-    raw_ticks = fetch_raw_ticks(symbol)
+    raw_ticks = fetch_1min_candles(symbol)
     
     # 2. Process data (Resample + Indicators + CVD) using the Indicator Engine
     processed_data = get_processed_candles(
@@ -65,6 +138,9 @@ def candles():
         macd_fast=macd_fast, macd_slow=macd_slow, macd_sig=macd_sig,
         ema1_len=ema1_len, ema2_len=ema2_len, cmf_len=cmf_len
     )
+    
+    # Update cache
+    processed_cache[cache_key] = (now, processed_data)
     
     return jsonify(processed_data)
 
@@ -79,22 +155,27 @@ def frvp():
     row_size = int(request.args.get("row_size", 24))
     value_area_pct = int(request.args.get("value_area_pct", 70))
     
-    # 1. Fetch raw ticks
-    df = fetch_raw_ticks(symbol)
+    # 1. Fetch 1-min candles from candles_1min.db
+    df = fetch_1min_candles(symbol)
     if df.empty:
         return jsonify(None)
 
     # 2. Select resolution
     res = get_best_resolution(start_time, end_time, chart_tf)
     
-    # 3. Resample to selected resolution
-    df["dt"] = pd.to_datetime(df["last_traded_time"], unit="s", utc=True)
+    # 3. Resample to selected resolution (candles already have OHLC)
+    df["dt"] = pd.to_datetime(df["timestamp"], unit="s", utc=True)
     df.set_index("dt", inplace=True)
     
-    ohlc = df["ltp"].resample(res).ohlc()
-    vol = df["last_traded_qty"].resample(res).sum()
-    resampled_df = pd.concat([ohlc, vol], axis=1).dropna()
-    resampled_df.columns = ['open', 'high', 'low', 'close', 'volume']
+    # Resample from 1-min candles to target resolution
+    resampled_df = df.resample(res).agg({
+        'open': 'first',
+        'high': 'max',
+        'low': 'min',
+        'close': 'last',
+        'volume': 'sum'
+    }).dropna()
+    
     resampled_df.reset_index(inplace=True)
     resampled_df["time"] = (resampled_df["dt"].astype("int64") // 10**9)
 
@@ -111,7 +192,7 @@ def ticks():
     symbol = request.args.get("symbol")
     
     # Fetch raw data
-    df = fetch_raw_ticks(symbol, limit=5000)
+    df = fetch_1min_candles(symbol, limit=5000)
     
     # Simple clean-up for the frontend line chart (UTC to IST)
     data = []
@@ -126,4 +207,4 @@ def ticks():
     return jsonify(data)
 
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    app.run(port=5000, debug=True, threaded=True)

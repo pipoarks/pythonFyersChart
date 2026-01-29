@@ -7,6 +7,11 @@ function hexToRgba(hex, alpha) {
 
 let currentSymbol = "NSE:TCS-EQ";
 let currentTF = "5min";
+
+// Support URL parameters for automation
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('symbol')) currentSymbol = urlParams.get('symbol');
+if (urlParams.has('tf')) currentTF = urlParams.get('tf');
 let priceChart, rsiChart, macdChart, cmfChart, cvdChart;
 let candleSeries, lineSeries, volumeSeries, ema1Series, ema2Series;
 let rsiSeries, rsiSmaSeries, macdSeries, macdSignalSeries, macdHistSeries, cmfSeries, cvdSeries;
@@ -14,7 +19,8 @@ let isSyncing = false;
 let activeModalPane = null;
 let charts = [];
 let lastVisibilityState = ""; // To track changes for flex reset
-let cvd8thLine = null;
+let cvdHighLine = null;
+let cvdLowLine = null;
 
 // Replay State
 let isReplayMode = false;
@@ -48,13 +54,15 @@ let indicatorSettings = {
         useCustom: false,
         customTF: "1min",
         visible: true,
-        refCandles: 8
+        refCandles: 8,
+        showHighRef: true,
+        showLowRef: true
     },
     cmf: {
         len: 20,
         visible: true,
         horizontalLines: [
-            { level: 0, color: '#787B86', style: 2, width: 1 },
+            { level: 0, color: '#787B86', style: 0, width: 1 },
             { level: 0.05, color: 'rgb(248, 48, 13)', style: 0, width: 2 },
             { level: -0.05, color: 'rgb(252, 32, 8)', style: 0, width: 2 }
         ]
@@ -67,20 +75,21 @@ let indicatorSettings = {
         showVA: true,
         showLabels: true,
         extendRight: false,
-        pocColor: '#ff0026',
-        pocWidth: 4,
+        pocColor: '#1900ffff',
+        pocWidth: 6,
         vaColor: 'rgba(0, 105, 202, 0.6)',
         nonVaColor: 'rgba(0, 105, 202, 0.2)',
         upColor: 'rgba(35, 209, 139, 0.6)',
         downColor: 'rgba(255, 69, 96, 0.6)',
-        vahColor: '#0069ca',
-        valColor: '#0069ca',
-        vahWidth: 2,
-        valWidth: 2,
-        vahWidth: 2,
-        valWidth: 2,
+        vahColor: '#fcae07ff',
+        valColor: '#fcae07ff',
+        vahWidth: 4,
+        valWidth: 4,
+        vahWidth: 4,
+        valWidth: 4,
         visible: true,
-        horizontalLines: []
+        horizontalLines: [],
+        isManualRange: false
     },
     ema1: {
         len: 21,
@@ -107,6 +116,13 @@ let frvpDragging = null; // 'start', 'end', or null
 let frvpCanvas, frvpCtx;
 let frvpPriceLines = [];
 
+// Range Tool State
+let rangeToolActive = false;
+let rangeSelectionStep = 0; // 0: idle, 1: picking start, 2: picking end
+let tempRange = { startTime: null, startPrice: null, endTime: null, endPrice: null };
+let activeRanges = []; // Array of { startTime, startPrice, endTime, endPrice, id }
+let rangeHitAreas = []; // Helper for click detection
+
 // Internal map to store price lines so we can clear them
 let priceLinesMap = {
     rsi: [],
@@ -115,18 +131,102 @@ let priceLinesMap = {
     cvd: []
 };
 
-// 0️⃣ Load Symbols
+// 0️⃣ Load Symbols & Search Logic
+let allSymbols = [];
 async function loadSymbols() {
     try {
         const resp = await fetch('http://127.0.0.1:5000/symbols');
-        const symbols = await resp.json();
-        const dropdown = document.getElementById('symbol-dropdown');
-        dropdown.innerHTML = symbols.map(s =>
-            `<option value="${s.symbol}">${s.name}</option>`
-        ).join('');
-        dropdown.value = currentSymbol;
+        allSymbols = await resp.json();
+        const searchInput = document.getElementById('symbol-search');
+        const currentSymObj = allSymbols.find(s => s.symbol === currentSymbol);
+        if (currentSymObj) searchInput.value = currentSymObj.symbol.split(':')[1] || currentSymObj.symbol;
+
+        setupSymbolSearch();
     } catch (e) { console.error("Error loading symbols:", e); }
 }
+
+function setupSymbolSearch() {
+    const input = document.getElementById('symbol-search');
+    const results = document.getElementById('symbol-results');
+    let selectedIndex = -1;
+
+    input.addEventListener('input', () => {
+        selectedIndex = -1;
+        const val = input.value.toLowerCase();
+        const matches = allSymbols.filter(s =>
+            s.symbol.toLowerCase().includes(val) ||
+            s.name.toLowerCase().includes(val)
+        );
+        renderMatches(matches);
+        results.style.display = 'block';
+    });
+
+    input.addEventListener('focus', () => {
+        selectedIndex = -1;
+        const matches = allSymbols.filter(s =>
+            s.symbol.toLowerCase().includes(input.value.toLowerCase()) ||
+            s.name.toLowerCase().includes(input.value.toLowerCase())
+        );
+        renderMatches(matches);
+        results.style.display = 'block';
+    });
+
+    input.addEventListener('keydown', (e) => {
+        const items = results.querySelectorAll('.search-item');
+        if (!items.length) return;
+
+        if (e.key === 'ArrowDown') {
+            selectedIndex = (selectedIndex + 1) % items.length;
+            updateSelection(items);
+            e.preventDefault();
+        } else if (e.key === 'ArrowUp') {
+            selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+            updateSelection(items);
+            e.preventDefault();
+        } else if (e.key === 'Enter') {
+            if (selectedIndex > -1) {
+                items[selectedIndex].click();
+            } else if (items.length > 0) {
+                items[0].click();
+            }
+        } else if (e.key === 'Escape') {
+            results.style.display = 'none';
+        }
+    });
+
+    function updateSelection(items) {
+        items.forEach((item, i) => {
+            item.classList.toggle('selected', i === selectedIndex);
+            if (i === selectedIndex) item.scrollIntoView({ block: 'nearest' });
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !results.contains(e.target)) {
+            results.style.display = 'none';
+        }
+    });
+
+    function renderMatches(matches) {
+        results.innerHTML = matches.map(s => `
+            <div class="search-item" onclick="selectSymbol('${s.symbol}')">
+                <span class="sym-code">${s.symbol}</span>
+                <span class="sym-name">${s.name}</span>
+            </div>
+        `).join('');
+    }
+}
+
+function selectSymbol(symbol) {
+    currentSymbol = symbol;
+    const searchInput = document.getElementById('symbol-search');
+    const symObj = allSymbols.find(s => s.symbol === symbol);
+    if (symObj) searchInput.value = symObj.symbol.split(':')[1] || symObj.symbol;
+    document.getElementById('symbol-results').style.display = 'none';
+    changeSymbol(symbol);
+}
+
+window.selectSymbol = selectSymbol;
 
 // 1️⃣ Initialize Charts
 async function initCharts() {
@@ -147,8 +247,8 @@ async function initCharts() {
                     }
                 });
             }
-            if (config.default_tf) currentTF = config.default_tf;
-            if (config.default_symbol) currentSymbol = config.default_symbol;
+            if (config.default_tf && !urlParams.has('tf')) currentTF = config.default_tf;
+            if (config.default_symbol && !urlParams.has('symbol')) currentSymbol = config.default_symbol;
 
             // Update UI for buttons
             document.querySelectorAll('#tf-selector button').forEach(b =>
@@ -276,7 +376,7 @@ async function initCharts() {
                 }
             });
             // Update FRVP drag if active
-            if (chart === priceChart && frvpToolActive) handleFRVPMouseMove(param);
+            if (chart === priceChart && (frvpToolActive || rangeToolActive)) handleFRVPMouseMove(param);
         });
     });
 
@@ -284,13 +384,14 @@ async function initCharts() {
     frvpCtx = frvpCanvas.getContext('2d');
 
     priceChart.subscribeClick(param => {
-        if (!frvpToolActive && !isJumpPending) return;
-        handleFRVPClick(param);
+        if (!frvpToolActive && !rangeToolActive && !isJumpPending) return;
+        handleToolClick(param);
     });
 
-    // Handle Dragging specifically for FRVP
+    // Handle Dragging specifically for Tools
     const pricePane = document.getElementById('price-pane');
     pricePane.addEventListener('mousedown', (e) => {
+        if (rangeToolActive) return; // Add range tool drag if needed
         if (!frvpToolActive || frvpSelectionStep !== 3) return;
         const rect = pricePane.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -379,11 +480,18 @@ async function initCharts() {
         });
         requestAnimationFrame(drawFRVP);
     });
+
+    // Ensure FRVP redraws on zoom/scroll
+    priceChart.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(drawFRVP));
+    try {
+        priceChart.priceScale('right').subscribeVisiblePriceRangeChange(() => requestAnimationFrame(drawFRVP));
+    } catch (e) {
+        console.warn("Price scale subscription failed, using fallback.");
+    }
 }
 
 // 2️⃣ Splitter Logic
 function initSplitters() {
-    const container = document.getElementById('main-container');
     const allSplitters = [
         document.getElementById('splitter-1'),
         document.getElementById('splitter-2'),
@@ -398,28 +506,53 @@ function initSplitters() {
         document.getElementById('cvd-pane')
     ];
 
-    // Only work with elements that actually exist in the DOM
-    const splitters = allSplitters.filter(s => s !== null);
-    const panes = allPanes.filter(p => p !== null);
-
-    let draggingIndex = -1;
+    let draggingSplitter = null;
     let startY, startPrevHeight, startNextHeight;
+    let prevPane, nextPane;
 
-    splitters.forEach((splitter, index) => {
-        // A splitter at index 'i' sits between panes[i] and panes[i+1]
-        if (index >= panes.length - 1) return;
+    allSplitters.forEach((splitter) => {
+        if (!splitter) return;
 
         splitter.addEventListener('mousedown', (e) => {
-            draggingIndex = index;
+            // Find nearest visible panes
+            prevPane = null;
+            nextPane = null;
+
+            // Search upwards
+            let curr = splitter.previousElementSibling;
+            while (curr) {
+                if (curr.classList.contains('chart-pane') && curr.style.display !== 'none') {
+                    prevPane = curr;
+                    break;
+                }
+                curr = curr.previousElementSibling;
+            }
+
+            // Search downwards
+            curr = splitter.nextElementSibling;
+            while (curr) {
+                if (curr.classList.contains('chart-pane') && curr.style.display !== 'none') {
+                    nextPane = curr;
+                    break;
+                }
+                curr = curr.nextElementSibling;
+            }
+
+            if (!prevPane || !nextPane) return;
+
+            draggingSplitter = splitter;
             startY = e.clientY;
-            startPrevHeight = panes[index].getBoundingClientRect().height;
-            startNextHeight = panes[index + 1].getBoundingClientRect().height;
+            startPrevHeight = prevPane.getBoundingClientRect().height;
+            startNextHeight = nextPane.getBoundingClientRect().height;
 
             splitter.classList.add('dragging');
             document.body.style.cursor = 'row-resize';
 
-            panes.forEach(p => {
-                p.style.flex = `0 0 ${p.getBoundingClientRect().height}px`;
+            // Set fixed flex basis for all visible panes to allow resizing
+            allPanes.forEach(p => {
+                if (p.style.display !== 'none') {
+                    p.style.flex = `0 0 ${p.getBoundingClientRect().height}px`;
+                }
             });
 
             e.preventDefault();
@@ -427,22 +560,20 @@ function initSplitters() {
     });
 
     document.addEventListener('mousemove', (e) => {
-        if (draggingIndex === -1) return;
+        if (!draggingSplitter) return;
 
         const deltaY = e.clientY - startY;
         const newPrevHeight = startPrevHeight + deltaY;
         const newNextHeight = startNextHeight - deltaY;
 
         if (newPrevHeight > 60 && newNextHeight > 60) {
-            panes[draggingIndex].style.flex = `0 0 ${newPrevHeight}px`;
-            panes[draggingIndex + 1].style.flex = `0 0 ${newNextHeight}px`;
+            prevPane.style.flex = `0 0 ${newPrevHeight}px`;
+            nextPane.style.flex = `0 0 ${newNextHeight}px`;
 
             [priceChart, rsiChart, macdChart, cmfChart, cvdChart].forEach((chart, i) => {
-                if (chart) {
-                    const p = allPanes[i];
-                    if (p && p.style.display !== 'none') {
-                        chart.resize(p.clientWidth, p.clientHeight);
-                    }
+                const p = allPanes[i];
+                if (chart && p && p.style.display !== 'none') {
+                    chart.resize(p.clientWidth, p.clientHeight);
                 }
             });
             requestAnimationFrame(drawFRVP);
@@ -450,9 +581,9 @@ function initSplitters() {
     });
 
     document.addEventListener('mouseup', () => {
-        if (draggingIndex !== -1) {
-            splitters[draggingIndex].classList.remove('dragging');
-            draggingIndex = -1;
+        if (draggingSplitter) {
+            draggingSplitter.classList.remove('dragging');
+            draggingSplitter = null;
             document.body.style.cursor = 'default';
         }
     });
@@ -512,7 +643,7 @@ async function loadData(isInitial = false) {
             // Hide all indicator panes in tick mode
             ['rsi', 'macd', 'cmf', 'cvd'].forEach(id => {
                 const pane = document.getElementById(`${id}-pane`);
-                const splitter = pane ? pane.nextElementSibling : null;
+                const splitter = pane ? pane.previousElementSibling : null;
                 if (pane) pane.style.display = 'none';
                 if (splitter && splitter.classList.contains('splitter')) splitter.style.display = 'none';
             });
@@ -526,8 +657,8 @@ async function loadData(isInitial = false) {
             ['rsi', 'macd', 'cmf', 'cvd'].forEach(id => {
                 const isVisible = indicatorSettings[id].visible;
                 const pane = document.getElementById(`${id}-pane`);
-                // Splitter is next sibling
-                const splitter = pane ? pane.nextElementSibling : null;
+                // Splitter is PREVIOUS sibling
+                const splitter = pane ? pane.previousElementSibling : null;
 
                 if (pane) {
                     pane.style.display = isVisible ? 'block' : 'none';
@@ -599,7 +730,7 @@ function updateHorizontalLines() {
                     price: h.level,
                     color: h.color,
                     lineWidth: h.width || 1,
-                    lineStyle: h.style !== undefined ? h.style : 2,
+                    lineStyle: h.style !== undefined ? h.style : 0,
                     title: h.level.toString(),
                     axisLabelVisible: true,
                 });
@@ -654,6 +785,8 @@ function openSettings(pane) {
                 </select>
             </div>
             <div class="setting-row"><label>Ref Candles (1st N)</label><input type="number" id="set-cvd-refCandles" value="${settings.refCandles}"></div>
+            <div class="setting-row"><label>Show High Ref</label><input type="checkbox" id="set-cvd-showHighRef" ${settings.showHighRef ? 'checked' : ''}></div>
+            <div class="setting-row"><label>Show Low Ref</label><input type="checkbox" id="set-cvd-showLowRef" ${settings.showLowRef ? 'checked' : ''}></div>
             <div class="setting-row"><label>Visible</label><input type="checkbox" id="set-cvd-visible" ${settings.visible ? 'checked' : ''}></div>
         `;
     } else if (pane === 'cmf') {
@@ -741,6 +874,8 @@ function saveSettings() {
         settings.useCustom = document.getElementById('set-cvd-useCustom').checked;
         settings.customTF = document.getElementById('set-cvd-customTF').value;
         settings.refCandles = parseInt(document.getElementById('set-cvd-refCandles').value);
+        settings.showHighRef = document.getElementById('set-cvd-showHighRef').checked;
+        settings.showLowRef = document.getElementById('set-cvd-showLowRef').checked;
         settings.visible = document.getElementById('set-cvd-visible').checked;
     } else if (pane === 'cmf') {
         settings.len = parseInt(document.getElementById('set-cmf-len').value);
@@ -800,11 +935,15 @@ function removeHorizontalLine(index) {
 function changeSymbol(symbol) {
     if (isReplayMode) exitReplayMode();
     currentSymbol = symbol;
+    frvpData = null; // Force refresh profile for new symbol
+    window.lastFRVPLogTime = null; // Allow new logs
     loadData(true);
 }
 function changeTF(tf) {
     if (isReplayMode) exitReplayMode();
     currentTF = tf;
+    frvpData = null; // Force refresh profile for new timeframe
+    window.lastFRVPLogTime = null; // Allow new logs
     document.querySelectorAll('#tf-selector button').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') === tf));
     loadData(true);
 }
@@ -841,14 +980,36 @@ function toggleFRVPTool() {
     }
 }
 
-function handleFRVPClick(param) {
-    if (!param.time) return;
+function handleToolClick(param) {
+    if (!param.time || !param.point) return;
+
+    // First check if user clicked an individual Range 'X' close button
+    const hitRect = rangeHitAreas.find(h =>
+        param.point.x >= h.x && param.point.x <= h.x + h.w &&
+        param.point.y >= h.y && param.point.y <= h.y + h.h
+    );
+    if (hitRect) {
+        activeRanges = activeRanges.filter(r => r.id !== hitRect.id);
+        requestAnimationFrame(drawFRVP);
+        return;
+    }
 
     if (isJumpPending) {
         handleJumpTo(param.time);
         return;
     }
 
+    if (rangeToolActive) {
+        handleRangeClick(param);
+        return;
+    }
+
+    if (frvpToolActive) {
+        handleFRVPClick(param);
+    }
+}
+
+function handleFRVPClick(param) {
     if (frvpSelectionStep === 1) {
         frvpRange.start = param.time;
         frvpSelectionStep = 2;
@@ -862,17 +1023,55 @@ function handleFRVPClick(param) {
             frvpRange.end = tmp;
         }
         frvpSelectionStep = 3;
+        indicatorSettings.frvp.isManualRange = true;
         document.body.style.cursor = 'default';
-        document.getElementById('frvp-settings-icon').style.display = 'inline-block';
+        const icon = document.getElementById('frvp-settings-icon');
+        if (icon) icon.style.display = 'inline-block';
         loadFRVP();
+    }
+}
+
+function handleRangeClick(param) {
+    if (!param.point) return;
+    const price = candleSeries.coordinateToPrice(param.point.y);
+
+    if (rangeSelectionStep === 1) {
+        tempRange.startTime = param.time;
+        tempRange.startPrice = price;
+        rangeSelectionStep = 2;
+        console.log("Range Tool: Pick end point");
+    } else if (rangeSelectionStep === 2) {
+        tempRange.endTime = param.time;
+        tempRange.endPrice = price;
+
+        // Save this range instance
+        activeRanges.push({
+            ...tempRange,
+            id: Date.now()
+        });
+
+        // Reset for next one if still active, or deactivate
+        tempRange = { startTime: null, startPrice: null, endTime: null, endPrice: null };
+        rangeSelectionStep = 1; // Stay in mode to allow another range
+
+        requestAnimationFrame(drawFRVP);
     }
 }
 
 let frvpThrottleTimer = null;
 function handleFRVPMouseMove(param) {
+    if (!param.time) return;
+
+    if (rangeToolActive && rangeSelectionStep === 2) {
+        tempRange.endTime = param.time;
+        tempRange.endPrice = candleSeries.coordinateToPrice(param.point.y);
+        requestAnimationFrame(drawFRVP);
+    }
+
     if (frvpDragging && param.time) {
         if (frvpDragging === 'start') frvpRange.start = param.time;
         else if (frvpDragging === 'end') frvpRange.end = param.time;
+        indicatorSettings.frvp.isManualRange = true;
 
         // Dynamic visual update
         requestAnimationFrame(drawFRVP);
@@ -900,23 +1099,29 @@ async function loadFRVP() {
     const settings = indicatorSettings.frvp;
     let endTime = frvpRange.end;
 
-    // In replay mode or with extendRight, we use the last visible candle as the end point
     if ((isReplayMode || settings.extendRight) && window.lastCandleTime) {
         endTime = window.lastCandleTime;
     }
 
     frvpLoading = true;
     try {
-
         const url = `http://127.0.0.1:5000/frvp?symbol=${currentSymbol}&start_time=${frvpRange.start}&end_time=${endTime}&chart_tf=${currentTF}&row_size=${settings.rows}&value_area_pct=${settings.vaPct}`;
+
+        console.log(`[FRVP-DEBUG] Fetching Vol Profile: ${currentSymbol} @ ${currentTF}`);
 
         try {
             const resp = await fetch(url);
+            if (!resp.ok) {
+                console.error(`[FRVP-DEBUG] API error: ${resp.status}`);
+                return;
+            }
             frvpData = await resp.json();
-            updateFRVPAxisLabels();
-            requestAnimationFrame(drawFRVP);
+            if (frvpData && frvpData.profile) {
+                updateFRVPAxisLabels();
+                requestAnimationFrame(drawFRVP);
+            }
         } catch (e) {
-            console.error("FRVP Load Error:", e);
+            console.error("[FRVP Load Error]:", e);
         }
     } finally {
         frvpLoading = false;
@@ -934,6 +1139,8 @@ function drawFRVP() {
     }
 
     frvpCtx.clearRect(0, 0, frvpCanvas.width, frvpCanvas.height);
+
+    if (rangeToolActive || activeRanges.length > 0) drawRangeTool();
 
     if (!frvpToolActive || currentTF === 'tick' || !indicatorSettings.frvp.visible) return;
     if (!frvpRange.start) return;
@@ -996,7 +1203,7 @@ function drawFRVP() {
     frvpCtx.fillStyle = 'rgba(88, 166, 255, 0.9)';
     frvpCtx.fillText('⚙️', xStart + 45, 20); // Settings Gear
 
-    if (frvpSelectionStep !== 3 || !frvpData) return;
+    if (frvpSelectionStep !== 3 || !frvpData || !frvpData.profile || frvpData.profile.length === 0) return;
 
     const settings = indicatorSettings.frvp;
     const { profile, poc, vah, val } = frvpData;
@@ -1011,9 +1218,8 @@ function drawFRVP() {
     // We'll draw it starting from xStart protruding right.
 
     profile.forEach((row, i) => {
-        // Price coordinate (top of bin)
-        // We need to map price to Y. Note: LWC Y is inverted (0 at top).
-        const yTop = candleSeries.priceToCoordinate(row.price + (profile[1].price - profile[0].price));
+        const priceStep = profile.length > 1 ? (profile[1].price - profile[0].price) : row.price * 0.001;
+        const yTop = candleSeries.priceToCoordinate(row.price + priceStep);
         const yBottom = candleSeries.priceToCoordinate(row.price);
         const h = Math.abs(yBottom - yTop);
 
@@ -1043,11 +1249,12 @@ function drawFRVP() {
     });
 
     // VAH Line
+    frvpCtx.setLineDash([]);
     frvpCtx.lineWidth = settings.vahWidth;
     frvpCtx.strokeStyle = settings.vahColor;
     const yVah = candleSeries.priceToCoordinate(vah);
     frvpCtx.beginPath();
-    frvpCtx.moveTo(xStart, yVah); frvpCtx.lineTo(frvpCanvas.width, yVah);
+    frvpCtx.moveTo(xStart, yVah); frvpCtx.lineTo(xEnd, yVah);
     frvpCtx.stroke();
 
     // VAL Line
@@ -1055,7 +1262,7 @@ function drawFRVP() {
     frvpCtx.strokeStyle = settings.valColor;
     const yVal = candleSeries.priceToCoordinate(val);
     frvpCtx.beginPath();
-    frvpCtx.moveTo(xStart, yVal); frvpCtx.lineTo(frvpCanvas.width, yVal);
+    frvpCtx.moveTo(xStart, yVal); frvpCtx.lineTo(xEnd, yVal);
     frvpCtx.stroke();
 
     // POC
@@ -1063,7 +1270,7 @@ function drawFRVP() {
     frvpCtx.strokeStyle = settings.pocColor;
     const yPoc = candleSeries.priceToCoordinate(poc);
     frvpCtx.beginPath();
-    frvpCtx.moveTo(xStart, yPoc); frvpCtx.lineTo(frvpCanvas.width, yPoc);
+    frvpCtx.moveTo(xStart, yPoc); frvpCtx.lineTo(xEnd, yPoc);
     frvpCtx.stroke();
 
     if (settings.showLabels) {
@@ -1073,27 +1280,149 @@ function drawFRVP() {
     }
 }
 
-// Ensure draw loop for FRVP
-if (priceChart) {
-    priceChart.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(drawFRVP));
-    try {
-        priceChart.priceScale('right').subscribeVisiblePriceRangeChange(() => requestAnimationFrame(drawFRVP));
-    } catch (e) {
-        console.warn("Price scale subscription failed, using fallback.");
-    }
-}
+// Ensure draw loop for FRVP (Subscription moved to initCharts)
 
 function removeFRVP() {
     frvpToolActive = false;
     frvpSelectionStep = 0;
     frvpData = null;
     frvpRange = { start: null, end: null };
+    indicatorSettings.frvp.isManualRange = false;
     const btn = document.getElementById('frvp-btn');
     if (btn) btn.classList.remove('active');
     const icon = document.getElementById('frvp-settings-icon');
     if (icon) icon.style.display = 'none';
     requestAnimationFrame(drawFRVP);
     updateFRVPAxisLabels(); // Clear lines
+}
+
+function toggleRangeTool() {
+    if (currentTF === 'tick') {
+        alert("Range Tool is only available on Candle Timeframes.");
+        return;
+    }
+    rangeToolActive = !rangeToolActive;
+    const btn = document.getElementById('range-btn');
+    if (btn) btn.classList.toggle('active', rangeToolActive);
+
+    if (rangeToolActive) {
+        if (frvpToolActive) toggleFRVPTool();
+        rangeSelectionStep = 1;
+        document.body.style.cursor = 'crosshair';
+        console.log("Range Tool: Pick start point");
+    } else {
+        removeRangeTool();
+    }
+}
+
+function removeRangeTool() {
+    rangeToolActive = false;
+    rangeSelectionStep = 0;
+    tempRange = { startTime: null, startPrice: null, endTime: null, endPrice: null };
+    document.body.style.cursor = 'default';
+    const btn = document.getElementById('range-btn');
+    if (btn) btn.classList.remove('active');
+    requestAnimationFrame(drawFRVP);
+}
+
+function drawRangeTool() {
+    rangeHitAreas = []; // Reset hit areas for each redraw
+
+    // 1. Draw Saved Ranges
+    activeRanges.forEach(range => {
+        drawSingleRange(range);
+    });
+
+    // 2. Draw Temporary Selection (Preview)
+    if (rangeSelectionStep > 0 && tempRange.startTime) {
+        drawSingleRange(tempRange, true);
+    }
+}
+
+function drawSingleRange(range, isPreview = false) {
+    const timeScale = priceChart.timeScale();
+    const xStart = timeScale.timeToCoordinate(range.startTime);
+    const yStart = candleSeries.priceToCoordinate(range.startPrice);
+
+    if (xStart === null || yStart === null) return;
+
+    let xEnd = range.endTime ? timeScale.timeToCoordinate(range.endTime) : xStart;
+    let yEnd = range.endPrice ? candleSeries.priceToCoordinate(range.endPrice) : yStart;
+
+    const rectX = Math.min(xStart, xEnd);
+    const rectY = Math.min(yStart, yEnd);
+    const rectW = Math.abs(xEnd - xStart);
+    const rectH = Math.abs(yEnd - yStart);
+
+    // Box & Cross
+    frvpCtx.fillStyle = isPreview ? 'rgba(88, 166, 255, 0.15)' : 'rgba(88, 166, 255, 0.1)';
+    frvpCtx.strokeStyle = isPreview ? '#58a6ff' : 'rgba(88, 166, 255, 0.5)';
+    frvpCtx.lineWidth = 1;
+    frvpCtx.fillRect(rectX, rectY, rectW, rectH);
+    frvpCtx.strokeRect(rectX, rectY, rectW, rectH);
+
+    frvpCtx.beginPath();
+    frvpCtx.moveTo(rectX, (yStart + yEnd) / 2); frvpCtx.lineTo(rectX + rectW, (yStart + yEnd) / 2);
+    frvpCtx.moveTo((xStart + xEnd) / 2, rectY); frvpCtx.lineTo((xStart + xEnd) / 2, rectY + rectH);
+    frvpCtx.stroke();
+
+    if (!range.endTime && isPreview) return;
+
+    // Stats
+    const pDiff = range.endPrice - range.startPrice;
+    const pPct = (pDiff / range.startPrice) * 100;
+    let bars = 0, totalVol = 0;
+    if (window.lastData) {
+        const t1 = Math.min(range.startTime, range.endTime);
+        const t2 = Math.max(range.startTime, range.endTime);
+        const segment = window.lastData.filter(d => d.time >= t1 && d.time <= t2);
+        bars = segment.length;
+        totalVol = segment.reduce((s, d) => s + (d.volume || 0), 0);
+    }
+    const durationSec = Math.abs(range.endTime - range.startTime);
+    let durStr = durationSec >= 86400 ? `${(durationSec / 86400).toFixed(1)}d` : `${Math.floor(durationSec / 60)}m`;
+    const volStr = totalVol >= 1000000 ? (totalVol / 1000000).toFixed(2) + 'M' : (totalVol / 1000).toFixed(1) + 'K';
+
+    const labelX = xEnd;
+    const labelY = Math.min(yStart, yEnd) - 65;
+
+    // Info Label Box
+    frvpCtx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    frvpCtx.shadowBlur = 4; frvpCtx.shadowColor = 'rgba(0,0,0,0.3)';
+    const lW = 120, lH = 60;
+    frvpCtx.beginPath();
+    frvpCtx.roundRect(labelX - lW / 2, labelY, lW, lH, 8);
+    frvpCtx.fill();
+    frvpCtx.shadowBlur = 0;
+
+    // Text
+    frvpCtx.fillStyle = 'black';
+    frvpCtx.textAlign = 'center';
+    frvpCtx.font = 'bold 12px Outfit';
+    frvpCtx.fillText(`${pDiff.toFixed(2)} (${pPct.toFixed(2)}%)`, labelX, labelY + 20);
+    frvpCtx.font = '11px Outfit';
+    frvpCtx.fillStyle = '#444';
+    frvpCtx.fillText(`${bars} bars, ${durStr}`, labelX, labelY + 36);
+    frvpCtx.fillText(`Vol: ${volStr}`, labelX, labelY + 52);
+
+    // X Icon (Only for permanent ones)
+    if (!isPreview) {
+        const xPos = labelX + lW / 2 - 18;
+        const yPos = labelY + 6;
+
+        // Background circle for X
+        frvpCtx.fillStyle = 'rgba(255, 69, 96, 0.1)';
+        frvpCtx.beginPath();
+        frvpCtx.arc(xPos + 7, yPos + 7, 8, 0, Math.PI * 2);
+        frvpCtx.fill();
+
+        frvpCtx.fillStyle = '#ff4560';
+        frvpCtx.font = 'bold 14px Arial';
+        frvpCtx.fillText('×', xPos + 7, yPos + 11);
+
+        // Save hit area for click detection (expand slightly for ease of use)
+        rangeHitAreas.push({ x: xPos - 2, y: yPos - 2, w: 20, h: 20, id: range.id });
+    }
 }
 
 function updateFRVPAxisLabels() {
@@ -1148,39 +1477,60 @@ function applyDefaultFRVPRange(data) {
     if (!data || data.length < 10) return;
 
     const settings = indicatorSettings.frvp;
-    const def = settings.defaultRange || { start: { h: 15, m: 0 }, end: { h: 15, m: 20 } };
+    if (settings.isManualRange) return;
 
-    console.log(`Applying Default FRVP Range (${def.start.h}:${String(def.start.m).padStart(2, '0')}-${def.end.h}:${String(def.end.m).padStart(2, '0')} IST)...`);
+    const def = settings.defaultRange || { start: { h: 15, m: 0 }, end: { h: 15, m: 20 } };
 
     const getIST = (time) => {
         const d = new Date(time * 1000);
-        const h = d.getUTCHours();
-        const m = d.getUTCMinutes();
-        return { h, m, time };
+        // Server already adds +5:30 to the timestamp. We use UTC methods to read shifted components.
+        return {
+            h: d.getUTCHours(),
+            m: d.getUTCMinutes(),
+            date: d.getUTCDate(),
+            month: d.getUTCMonth(),
+            year: d.getUTCFullYear(),
+            time
+        };
+    };
+
+    const targetDate = getIST(data[data.length - 1].time);
+    const getISTString = (t) => {
+        const d = new Date(t * 1000);
+        return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
     };
 
     let startCandle = null;
     let endCandle = null;
 
-    for (let i = 0; i < data.length; i++) {
+    // Search from end backwards to find TODAY'S range
+    for (let i = data.length - 1; i >= 0; i--) {
         const t = getIST(data[i].time);
 
-        // Find Start
-        if (!startCandle && t.h === def.start.h && t.m >= def.start.m) {
-            startCandle = data[i].time;
+        // Target only the latest day on the chart
+        if (t.date !== targetDate.date || t.month !== targetDate.month || t.year !== targetDate.year) continue;
+
+        // Find End
+        if (!endCandle) {
+            if ((t.h < def.end.h) || (t.h === def.end.h && t.m <= def.end.m)) {
+                endCandle = data[i].time;
+            }
         }
 
-        // Find End (last candle at or before the end time)
-        if (startCandle) {
-            if (t.h === def.end.h && t.m <= def.end.m) {
-                endCandle = data[i].time;
-            } else if (t.h > def.end.h || (t.h === def.end.h && t.m > def.end.m)) {
-                break;
+        // Find Start
+        if (endCandle) {
+            if (t.h > def.start.h || (t.h === def.start.h && t.m >= def.start.m)) {
+                startCandle = data[i].time;
+            } else {
+                break; // Passed the start window
             }
         }
     }
 
     if (startCandle && endCandle) {
+        if (startCandle >= endCandle) return;
+
+        const rangeChanged = (startCandle !== frvpRange.start) || (endCandle !== frvpRange.end);
         frvpRange.start = startCandle;
         frvpRange.end = endCandle;
         frvpToolActive = true;
@@ -1191,11 +1541,16 @@ function applyDefaultFRVPRange(data) {
         const icon = document.getElementById('frvp-settings-icon');
         if (icon) icon.style.display = 'inline-block';
 
-        console.log("✓ Auto-applying FRVP:", startCandle, "->", endCandle);
-        console.log("✓ FRVP range applied from configuration.");
-        loadFRVP();
-    } else {
-        console.log("Default FRVP window from config not found in current data.");
+        if (rangeChanged || !frvpData) {
+            console.log(`✓ [FRVP-AUTO] Found Window: ${getISTString(startCandle)} -> ${getISTString(endCandle)} on ${targetDate.date}/${targetDate.month + 1}`);
+            loadFRVP();
+        }
+    } else if (!frvpToolActive) {
+        // Log once per refresh if window not found
+        if (window.lastFRVPLogTime !== targetDate.date) {
+            console.log(`[FRVP-DEBUG] Searching for ${def.start.h}:${def.start.m} window on ${targetDate.date}/${targetDate.month + 1}...`);
+            window.lastFRVPLogTime = targetDate.date;
+        }
     }
 }
 
@@ -1253,14 +1608,13 @@ function toggleFrvpVisibility() {
 
 function updateSeriesData(data, isInitial = false) {
     if (!data || data.length === 0) return;
+    window.lastData = data;
 
     if (candleSeries) {
         candleSeries.setData(data);
         window.lastCandleTime = data[data.length - 1].time;
         if (currentTF !== 'tick' && !isReplayMode) {
-            if ((isInitial && !frvpToolActive) || (!isInitial && frvpToolActive)) {
-                applyDefaultFRVPRange(data);
-            }
+            applyDefaultFRVPRange(data);
         }
     }
 
@@ -1334,9 +1688,13 @@ function updateSeriesData(data, isInitial = false) {
 function updateCVDRefLine(data) {
     if (!cvdSeries || !cvdChart || !data || data.length === 0) return;
 
-    if (cvd8thLine) {
-        try { cvdSeries.removePriceLine(cvd8thLine); } catch (e) { }
-        cvd8thLine = null;
+    if (cvdHighLine) {
+        try { cvdSeries.removePriceLine(cvdHighLine); } catch (e) { }
+        cvdHighLine = null;
+    }
+    if (cvdLowLine) {
+        try { cvdSeries.removePriceLine(cvdLowLine); } catch (e) { }
+        cvdLowLine = null;
     }
 
     const { refCandles, visible } = indicatorSettings.cvd;
@@ -1353,17 +1711,29 @@ function updateCVDRefLine(data) {
         // Take the first N candles of the day
         const firstNCandles = lastDayData.slice(0, refCandles);
 
-        // Find the maximum CVD value (maximum of the high values in those candles)
-        const highestValue = Math.max(...firstNCandles.map(d => d.cvd_h));
+        if (indicatorSettings.cvd.showHighRef) {
+            const highestValue = Math.max(...firstNCandles.map(d => d.cvd_h));
+            cvdHighLine = cvdSeries.createPriceLine({
+                price: highestValue,
+                color: '#ff9800',
+                lineWidth: 2,
+                lineStyle: LightweightCharts.LineStyle.Solid,
+                title: `High (1st ${firstNCandles.length})`,
+                axisLabelVisible: true,
+            });
+        }
 
-        cvd8thLine = cvdSeries.createPriceLine({
-            price: highestValue,
-            color: '#ff9800',
-            lineWidth: 2,
-            lineStyle: LightweightCharts.LineStyle.Dashed,
-            title: `High (1st ${firstNCandles.length})`,
-            axisLabelVisible: true,
-        });
+        if (indicatorSettings.cvd.showLowRef) {
+            const lowestValue = Math.min(...firstNCandles.map(d => d.cvd_l));
+            cvdLowLine = cvdSeries.createPriceLine({
+                price: lowestValue,
+                color: '#2196f3',
+                lineWidth: 2,
+                lineStyle: LightweightCharts.LineStyle.Solid,
+                title: `Low (1st ${firstNCandles.length})`,
+                axisLabelVisible: true,
+            });
+        }
     }
 }
 

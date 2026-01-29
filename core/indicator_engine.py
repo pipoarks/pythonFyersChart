@@ -9,35 +9,44 @@ from indicators.cmf import calculate_cmf
 
 def get_processed_candles(df, tf="1min", intrabar_tf=None, anchor="D", rsi_len=14, rsi_sma_len=None, macd_fast=12, macd_slow=26, macd_sig=9, ema1_len=None, ema2_len=None, cmf_len=20):
     """
-    Enhanced processor: Turns raw ticks into CVD Candles and OHLC Indicators.
-    Derives HTF candles from LTF intrabar data as per requirements.
+    Enhanced processor: Turns raw ticks OR 1-min candles into CVD Candles and OHLC Indicators.
     """
     if df.empty:
         return []
 
-    # 1. Determine Intrabar Timeframe (Rule 1)
-    if not intrabar_tf:
-        if 'min' in tf or 'h' in tf:
+    # 1. Detect input type and Prepare base_df
+    if 'timestamp' in df.columns and 'open' in df.columns:
+        # Input is already Candles (from candle_data_provider)
+        base_df = df.copy()
+        base_df["time"] = base_df["timestamp"]
+        if not intrabar_tf:
             intrabar_tf = "1min"
-        elif 's' in tf:
-            intrabar_tf = "1s"
-        elif 'D' in tf:
-            intrabar_tf = "5min"
-        else:
-            intrabar_tf = "1min" # Default
+    else:
+        # Input is Raw Ticks (from data_provider)
+        # Determine Intrabar Timeframe (Rule 1)
+        if not intrabar_tf:
+            if 'min' in tf or 'h' in tf:
+                intrabar_tf = "1min"
+            elif 's' in tf:
+                intrabar_tf = "1s"
+            elif 'D' in tf:
+                intrabar_tf = "5min"
+            else:
+                intrabar_tf = "1min" # Default
 
-    # 2. Resample into Base Intrabar layer
-    df["dt"] = pd.to_datetime(df["last_traded_time"], unit="s", utc=True)
-    df.set_index("dt", inplace=True)
-    
-    base_ohlc = df["ltp"].resample(intrabar_tf).ohlc()
-    base_volume = df["last_traded_qty"].resample(intrabar_tf).sum()
-    base_df = pd.concat([base_ohlc, base_volume], axis=1).dropna()
-    base_df.columns = ['open', 'high', 'low', 'close', 'volume']
-    base_df.reset_index(inplace=True)
-    
-    # Convert dt to unix time for internal functions
-    base_df["time"] = (base_df["dt"].astype("int64") // 10**9)
+        # Resample into Base Intrabar layer
+        df["dt_tmp"] = pd.to_datetime(df["last_traded_time"], unit="s", utc=True)
+        df.set_index("dt_tmp", inplace=True)
+        
+        base_ohlc = df["ltp"].resample(intrabar_tf).ohlc()
+        base_volume = df["last_traded_qty"].resample(intrabar_tf).sum()
+        base_df = pd.concat([base_ohlc, base_volume], axis=1).dropna()
+        base_df.columns = ['open', 'high', 'low', 'close', 'volume']
+        base_df.reset_index(inplace=True)
+        
+        # Convert dt to unix time for internal functions
+        base_df["time"] = (base_df["dt_tmp"].astype("int64") // 10**9)
+        intrabar_tf = intrabar_tf # keep it for comparison
 
     # 3. Calculate Base CVD Layer (Rule 2 & 3)
     cvd_base_df = calculate_cvd_base(base_df, anchor_period=anchor)

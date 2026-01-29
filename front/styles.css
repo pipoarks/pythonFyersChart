@@ -80,13 +80,101 @@ select option {
     color: var(--text-primary);
 }
 
-button:hover,
-select:hover {
+button:hover {
     color: white;
 }
 
+/* Searchable Dropdown Styling */
+.search-dropdown-container {
+    position: relative;
+    background: #161b22;
+    padding: 2px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    width: 200px;
+}
+
+#symbol-search {
+    background: transparent;
+    border: none;
+    color: var(--accent-color);
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    width: 100%;
+    outline: none;
+    font-family: 'Outfit', sans-serif;
+}
+
+#symbol-search::placeholder {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.search-results {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 280px;
+    max-height: 400px;
+    background: rgba(13, 17, 23, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.search-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+}
+
+.search-item:last-child {
+    border-bottom: none;
+}
+
+.search-item:hover,
+.search-item.selected {
+    background: rgba(88, 166, 255, 0.15);
+}
+
+.search-item .sym-code {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent-color);
+}
+
+.search-item .sym-name {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
 button.active,
-#frvp-btn.active {
+#frvp-btn.active,
+#range-btn.active {
     background: var(--accent-color);
     color: white;
 }

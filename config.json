@@ -1,16 +1,16 @@
 {
     "indicators": {
         "ema1": {
-            "visible": true,
+            "visible": false,
             "len": 21
         },
         "ema2": {
-            "visible": true,
+            "visible": false,
             "len": 9
         },
         "rsi": {
-            "visible": false,
-            "len": 4,
+            "visible": true,
+            "len": 20,
             "smaLen": 8,
             "showSma": false
         },
@@ -23,28 +23,55 @@
         "cvd": {
             "visible": true,
             "anchor": "D",
-            "refCandles": 4
+            "refCandles": 16,
+            "showHighRef": true,
+            "showLowRef": true
         },
         "cmf": {
             "visible": true,
-            "len": 5
+            "len": 20
         },
         "frvp": {
             "visible": true,
-            "rows": 10,
+            "rows": 24,
             "vaPct": 70,
             "defaultRange": {
                 "start": {
-                    "h": 11,
-                    "m": 25
+                    "h": 9,
+                    "m": 15
                 },
                 "end": {
-                    "h": 11,
-                    "m": 35
+                    "h": 10,
+                    "m": 25
                 }
             }
         }
     },
     "default_tf": "5min",
-    "default_symbol": "NSE:TECHM-EQ"
+    "default_symbol": "NSE:TATAPOWER-EQ",
+    "watchlist": [
+        "NSE:POWERINDIA-EQ",
+        "NSE:MCX-EQ",
+        "NSE:HDFCAMC-EQ",
+        "NSE:GODREJPROP-EQ",
+        "NSE:JINDALSTEL-EQ",
+        "NSE:HINDALCO-EQ",
+        "NSE:INDIANB-EQ",
+        "NSE:DLF-EQ",
+        "NSE:OIL-EQ",
+        "NSE:COALINDIA-EQ",
+        "NSE:JSWENERGY-EQ",
+        "NSE:NATIONALUM-EQ",
+        "NSE:PFC-EQ",
+        "NSE:RECLTD-EQ",
+        "NSE:TATAPOWER-EQ",
+        "NSE:NTPC-EQ",
+        "NSE:PETRONET-EQ",
+        "NSE:MANAPPURAM-EQ",
+        "NSE:LTF-EQ",
+        "NSE:HUDCO-EQ",
+        "NSE:GAIL-EQ",
+        "NSE:CANBK-EQ",
+        "NSE:SAMMAANCAP-EQ"
+    ]
 }

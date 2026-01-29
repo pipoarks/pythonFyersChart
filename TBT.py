@@ -36,7 +36,7 @@ def save_tick_buffered(msg):
 
     buffer.append(row)
 
-    if len(buffer) >= 5:   # commit every 100 ticks
+    if len(buffer):   # commit every 100 ticks
         cur.executemany("""
         INSERT INTO ticks (
             symbol, ltp, last_traded_time, exch_feed_time,
