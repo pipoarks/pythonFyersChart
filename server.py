@@ -16,6 +16,10 @@ import time
 processed_cache = {} # { (symbol, tf, ...): (timestamp, data) }
 CACHE_TTL = 2 # 2 seconds cache is enough for 3s refresh
 
+# Raw data cache for database fetches
+raw_data_cache = {} # { symbol: (timestamp, dataframe) }
+RAW_CACHE_TTL = 5 # Cache raw ticks for 5 seconds
+
 app = Flask(__name__)
 CORS(app)
 
@@ -52,7 +56,18 @@ def get_watchlist():
         with open(config_path, "r") as f:
             config = json.load(f)
             watchlist = config.get("watchlist", [])
-            result = [{"symbol": sym, "name": sym.split(':')[1] if ':' in sym else sym} for sym in watchlist]
+            result = []
+            for item in watchlist:
+                if isinstance(item, str):
+                    sym = item
+                    result.append({"symbol": sym, "name": sym.split(':')[1] if ':' in sym else sym})
+                else:
+                    sym = item.get("symbol", "")
+                    result.append({
+                        "symbol": sym, 
+                        "name": sym.split(':')[1] if ':' in sym else sym,
+                        "alert_times": item.get("alert_times", [])
+                    })
             return jsonify(result)
     return jsonify([])
 
@@ -63,27 +78,32 @@ def sync_watchlist():
     log_file = f"logs/alerts_{today_str}.log"
     config_path = "config.json"
     
-    new_symbols = set()
+    symbol_data = {} # {symbol: {"symbol": sym, "alert_times": [times]}}
     if os.path.exists(log_file):
-        # Using a more efficient line-by-line read for large logs
         with open(log_file, "r", encoding="utf-8") as f:
             for line in f:
-                # Find all occurrences in the current line
-                matches = re.findall(r"NSE:[\w-]+-EQ", line)
-                for sym in matches:
-                    new_symbols.add(sym)
+                # Match: 🚀 [BUY ALERT] NSE:TATAPOWER-EQ (5min) triggered at 11:25!
+                match = re.search(r"🚀 \[.*?\] (NSE:[\w-]+-EQ) \(.*?\) triggered at (\d{2}:\d{2})", line)
+                if match:
+                    sym = match.group(1)
+                    time_str = match.group(2)
+                    if sym not in symbol_data:
+                        symbol_data[sym] = {"symbol": sym, "alert_times": []}
+                    if time_str not in symbol_data[sym]["alert_times"]:
+                        symbol_data[sym]["alert_times"].append(time_str)
     
     if os.path.exists(config_path):
         with open(config_path, "r") as f:
             config = json.load(f)
         
-        # Sort for consistency
-        config["watchlist"] = sorted(list(new_symbols))
+        # Sort by symbol for consistency
+        watchlist_objs = [symbol_data[s] for s in sorted(symbol_data.keys())]
+        config["watchlist"] = watchlist_objs
         
         with open(config_path, "w") as f:
             json.dump(config, f, indent=4)
             
-        return jsonify({"success": True, "count": len(new_symbols), "symbols": list(new_symbols)})
+        return jsonify({"success": True, "count": len(watchlist_objs), "symbols": watchlist_objs})
     
     return jsonify({"success": False, "error": "config.json not found"})
 
@@ -102,13 +122,17 @@ def candles():
     anchor = request.args.get("anchor", "D")
     intrabar_tf = request.args.get("intrabar_tf") 
     
-    rsi_len = int(request.args.get("rsi_len", 14))
+    rsi_len = request.args.get("rsi_len")
+    rsi_len = int(rsi_len) if rsi_len and rsi_len != 'null' else None
     rsi_sma_len = request.args.get("rsi_sma_len")
     rsi_sma_len = int(rsi_sma_len) if rsi_sma_len and rsi_sma_len != 'null' else None
     
-    macd_fast = int(request.args.get("macd_fast", 12))
-    macd_slow = int(request.args.get("macd_slow", 26))
-    macd_sig = int(request.args.get("macd_sig", 9))
+    macd_fast = request.args.get("macd_fast")
+    macd_slow = request.args.get("macd_slow")
+    macd_sig = request.args.get("macd_sig")
+    macd_fast = int(macd_fast) if macd_fast and macd_fast != 'null' else None
+    macd_slow = int(macd_slow) if macd_slow and macd_slow != 'null' else None
+    macd_sig = int(macd_sig) if macd_sig and macd_sig != 'null' else None
 
     ema1_len = request.args.get("ema1_len")
     ema1_len = int(ema1_len) if ema1_len and ema1_len != 'null' else None
@@ -117,10 +141,19 @@ def candles():
     ema2_len = int(ema2_len) if ema2_len and ema2_len != 'null' else None
     
     cmf_len = request.args.get("cmf_len")
-    cmf_len = int(cmf_len) if cmf_len and cmf_len != 'null' else 20
+    cmf_len = int(cmf_len) if cmf_len and cmf_len != 'null' else None
+    
+    roc_len = request.args.get("roc_len")
+    roc_len = int(roc_len) if roc_len and roc_len != 'null' else None
+    
+    vwap_enabled = request.args.get("vwap") == "true"
+    
+    fvg_threshold = float(request.args.get("fvg_threshold", 0.0))
+    fvg_auto = request.args.get("fvg_auto") == "true"
+    fvg_only_today = request.args.get("fvg_only_today") == "true"
     
     # Cache key
-    cache_key = (symbol, tf, anchor, intrabar_tf, rsi_len, rsi_sma_len, macd_fast, macd_slow, macd_sig, ema1_len, ema2_len, cmf_len)
+    cache_key = (symbol, tf, anchor, intrabar_tf, rsi_len, rsi_sma_len, macd_fast, macd_slow, macd_sig, ema1_len, ema2_len, cmf_len, roc_len, vwap_enabled, fvg_threshold, fvg_auto, fvg_only_today)
     
     now = time.time()
     if cache_key in processed_cache:
@@ -128,15 +161,25 @@ def candles():
         if now - timestamp < CACHE_TTL:
             return jsonify(cached_data)
 
-    # 1. Fetch raw data using the Data Provider
-    raw_ticks = fetch_1min_candles(symbol)
+    # 1. Fetch raw data using the Data Provider (with caching)
+    if symbol in raw_data_cache:
+        cached_ts, cached_df = raw_data_cache[symbol]
+        if now - cached_ts < RAW_CACHE_TTL:
+            raw_ticks = cached_df
+        else:
+            raw_ticks = fetch_1min_candles(symbol)
+            raw_data_cache[symbol] = (now, raw_ticks)
+    else:
+        raw_ticks = fetch_1min_candles(symbol)
+        raw_data_cache[symbol] = (now, raw_ticks)
     
     # 2. Process data (Resample + Indicators + CVD) using the Indicator Engine
     processed_data = get_processed_candles(
         raw_ticks, tf, intrabar_tf=intrabar_tf, anchor=anchor,
         rsi_len=rsi_len, rsi_sma_len=rsi_sma_len,
         macd_fast=macd_fast, macd_slow=macd_slow, macd_sig=macd_sig,
-        ema1_len=ema1_len, ema2_len=ema2_len, cmf_len=cmf_len
+        ema1_len=ema1_len, ema2_len=ema2_len, cmf_len=cmf_len, roc_len=roc_len,
+        show_vwap=vwap_enabled, fvg_threshold=fvg_threshold, fvg_auto=fvg_auto, fvg_only_today=fvg_only_today
     )
     
     # Update cache
@@ -205,6 +248,68 @@ def ticks():
         last_time = current_time
 
     return jsonify(data)
+
+@app.route("/fvg_report")
+def fvg_report():
+    symbol = request.args.get("symbol")
+    tf = request.args.get("tf", "5min")
+    fvg_threshold = float(request.args.get("fvg_threshold", 0.0))
+    fvg_auto = request.args.get("fvg_auto") == "true"
+    fvg_only_today = request.args.get("fvg_only_today") == "true"
+
+    # 1. Fetch data
+    df_1min = fetch_1min_candles(symbol)
+    if df_1min.empty:
+        return "No data found for symbol.", 404
+
+    # 2. Process via engine to get aggregated candles and FVGs
+    # We use get_processed_candles to ensure identical logic to the chart
+    processed = get_processed_candles(
+        df_1min, tf=tf, 
+        fvg_threshold=fvg_threshold, fvg_auto=fvg_auto, fvg_only_today=fvg_only_today
+    )
+    
+    fvg_records = processed.get("fvg", [])
+    
+    # 3. Generate Report Text
+    report = []
+    report.append(f"FAIR VALUE GAP (FVG) DETAILS REPORT")
+    report.append(f"===================================")
+    report.append(f"Symbol:    {symbol}")
+    report.append(f"Timeframe: {tf}")
+    report.append(f"Generated: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')} IST")
+    report.append(f"Settings:  Threshold={fvg_threshold}%, Auto={fvg_auto}, OnlyToday={fvg_only_today}")
+    report.append(f"Total gaps identified: {len(fvg_records)}")
+    report.append(f"")
+    
+    if not fvg_records:
+        report.append("No Fair Value Gaps detected with the current settings.")
+    else:
+        for i, fvg in enumerate(fvg_records, 1):
+            t_str = pd.to_datetime(fvg['time'], unit='s').strftime('%Y-%m-%d %H:%M:%S')
+            is_bull = fvg['is_bull']
+            top = fvg['top']
+            bottom = fvg['bottom']
+            
+            report.append(f"{i}. [{t_str}] {'BULLISH' if is_bull else 'BEARISH'} FVG")
+            report.append(f"   Levels: Top={top:.2f}, Bottom={bottom:.2f}")
+            
+            if is_bull:
+                report.append(f"   Why: Current Low ({top:.2f}) is higher than the High from two candles ago ({bottom:.2f}).")
+                report.append(f"   How: An aggressive upwards move created a 'Fair Value Gap' where price jumped so fast that sellers couldn't match buyers in that range.")
+            else:
+                report.append(f"   Why: Current High ({bottom:.2f}) is lower than the Low from two candles ago ({top:.2f}).")
+                report.append(f"   How: An aggressive downwards move created a 'Fair Value Gap' where price dropped so fast that buyers couldn't match sellers in that range.")
+            
+            if fvg['mitigated']:
+                m_time = pd.to_datetime(fvg['mitigation_time'], unit='s').strftime('%Y-%m-%d %H:%M:%S')
+                report.append(f"   Status: MITIGATED at {m_time}")
+            else:
+                report.append(f"   Status: UNMITIGATED (Open Gap)")
+            
+            report.append("")
+
+    return "\n".join(report), 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True, threaded=True)

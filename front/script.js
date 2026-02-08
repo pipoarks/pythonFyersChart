@@ -12,9 +12,9 @@ let currentTF = "5min";
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.has('symbol')) currentSymbol = urlParams.get('symbol');
 if (urlParams.has('tf')) currentTF = urlParams.get('tf');
-let priceChart, rsiChart, macdChart, cmfChart, cvdChart;
-let candleSeries, lineSeries, volumeSeries, ema1Series, ema2Series;
-let rsiSeries, rsiSmaSeries, macdSeries, macdSignalSeries, macdHistSeries, cmfSeries, cvdSeries;
+let priceChart, rsiChart, macdChart, cmfChart, cvdChart, rocChart;
+let candleSeries, lineSeries, volumeSeries, ema1Series, ema2Series, vwapSeries;
+let rsiSeries, rsiSmaSeries, macdSeries, macdSignalSeries, macdHistSeries, cmfSeries, cvdSeries, rocSeries;
 let isSyncing = false;
 let activeModalPane = null;
 let charts = [];
@@ -81,8 +81,8 @@ let indicatorSettings = {
         nonVaColor: 'rgba(0, 105, 202, 0.2)',
         upColor: 'rgba(35, 209, 139, 0.6)',
         downColor: 'rgba(255, 69, 96, 0.6)',
-        vahColor: '#fcae07ff',
-        valColor: '#fcae07ff',
+        vahColor: '#FFFFFF',
+        valColor: '#FFFFFF',
         vahWidth: 4,
         valWidth: 4,
         vahWidth: 4,
@@ -104,8 +104,33 @@ let indicatorSettings = {
         width: 3,
         visible: true,
         horizontalLines: []
+    },
+    vwap: {
+        width: 2,
+        visible: true
+    },
+    fvg: {
+        threshold: 0,
+        auto: false,
+        bullColor: 'rgba(8, 153, 129, 0.3)',
+        bearColor: 'rgba(242, 54, 69, 0.3)',
+        extend: 20,
+        showLast: 0,
+        mitigationLevels: false,
+        visible: true,
+        onlyToday: true,
+        horizontalLines: []
+    },
+    roc: {
+        len: 5,
+        visible: true,
+        color: '#ffeb3b',
+        width: 2,
+        horizontalLines: [{ level: 0, color: 'rgba(255, 255, 255, 0.2)' }]
     }
 };
+
+let watchlistData = []; // To store alert times for markers
 
 // FRVP Tool State
 let frvpToolActive = false;
@@ -128,8 +153,12 @@ let priceLinesMap = {
     rsi: [],
     macd: [],
     cmf: [],
-    cvd: []
+    cvd: [],
+    roc: [],
+    fvg: []
 };
+
+let fvgData = [];
 
 // 0️⃣ Load Symbols & Search Logic
 let allSymbols = [];
@@ -229,6 +258,14 @@ function selectSymbol(symbol) {
 window.selectSymbol = selectSymbol;
 
 // 1️⃣ Initialize Charts
+function updateSymbolDisplay() {
+    const display = document.getElementById('symbol-display');
+    if (!display) return;
+    const tfLabel = document.querySelector(`#tf-selector button[data-val="${currentTF}"]`)?.textContent || currentTF.toUpperCase();
+    const cleanSymbol = currentSymbol.includes(':') ? currentSymbol.split(':')[1] : currentSymbol;
+    display.textContent = `${cleanSymbol} · ${tfLabel}`;
+}
+
 async function initCharts() {
     // Load config first
     try {
@@ -249,6 +286,9 @@ async function initCharts() {
             }
             if (config.default_tf && !urlParams.has('tf')) currentTF = config.default_tf;
             if (config.default_symbol && !urlParams.has('symbol')) currentSymbol = config.default_symbol;
+            if (config.watchlist) watchlistData = config.watchlist.map(item =>
+                typeof item === 'string' ? { symbol: item, alert_times: [] } : item
+            );
 
             // Update UI for buttons
             document.querySelectorAll('#tf-selector button').forEach(b =>
@@ -291,11 +331,12 @@ async function initCharts() {
     lineSeries = priceChart.addLineSeries({ color: '#58a6ff', lineWidth: 2, visible: false });
     ema1Series = priceChart.addLineSeries({ color: indicatorSettings.ema1.color, lineWidth: indicatorSettings.ema1.width, visible: indicatorSettings.ema1.visible });
     ema2Series = priceChart.addLineSeries({ color: indicatorSettings.ema2.color, lineWidth: indicatorSettings.ema2.width, visible: indicatorSettings.ema2.visible });
+    vwapSeries = priceChart.addLineSeries({ color: indicatorSettings.vwap.color, lineWidth: indicatorSettings.vwap.width, visible: indicatorSettings.vwap.visible });
 
     // --- RSI Chart ---
     rsiChart = LightweightCharts.createChart(document.getElementById('rsi-pane'), {
         ...commonOptions,
-        timeScale: { ...commonOptions.timeScale, visible: false }
+        timeScale: { ...commonOptions.timeScale, visible: true }
     });
     rsiSeries = rsiChart.addLineSeries({ color: '#ff9800', lineWidth: 2 });
     rsiSmaSeries = rsiChart.addLineSeries({ color: indicatorSettings.rsi.smaColor, lineWidth: indicatorSettings.rsi.smaWidth });
@@ -305,7 +346,7 @@ async function initCharts() {
     if (macdEl) {
         macdChart = LightweightCharts.createChart(macdEl, {
             ...commonOptions,
-            timeScale: { ...commonOptions.timeScale, visible: false }
+            timeScale: { ...commonOptions.timeScale, visible: true }
         });
         macdHistSeries = macdChart.addHistogramSeries({});
         macdSeries = macdChart.addLineSeries({ color: '#2196f3', lineWidth: 1 });
@@ -317,7 +358,7 @@ async function initCharts() {
     if (cmfEl) {
         cmfChart = LightweightCharts.createChart(cmfEl, {
             ...commonOptions,
-            timeScale: { ...commonOptions.timeScale, visible: false }
+            timeScale: { ...commonOptions.timeScale, visible: true }
         });
         cmfSeries = cmfChart.addLineSeries({ color: '#43A047', lineWidth: 2 });
     }
@@ -340,13 +381,24 @@ async function initCharts() {
         });
     }
 
+    // --- ROC Chart ---
+    const rocEl = document.getElementById('roc-pane');
+    if (rocEl) {
+        rocChart = LightweightCharts.createChart(rocEl, {
+            ...commonOptions,
+            timeScale: { ...commonOptions.timeScale, visible: true }
+        });
+        rocSeries = rocChart.addLineSeries({ color: indicatorSettings.roc.color, lineWidth: indicatorSettings.roc.width });
+    }
+
     // --- SYNCING LOGIC ---
     const chartObjects = [
         { chart: priceChart, id: 'price-pane' },
         { chart: rsiChart, id: 'rsi-pane' },
         { chart: macdChart, id: 'macd-pane' },
         { chart: cmfChart, id: 'cmf-pane' },
-        { chart: cvdChart, id: 'cvd-pane' }
+        { chart: cvdChart, id: 'cvd-pane' },
+        { chart: rocChart, id: 'roc-pane' }
     ].filter(item => item.chart && document.getElementById(item.id));
 
     charts = chartObjects.map(item => item.chart);
@@ -496,14 +548,16 @@ function initSplitters() {
         document.getElementById('splitter-1'),
         document.getElementById('splitter-2'),
         document.getElementById('splitter-3'),
-        document.getElementById('splitter-4')
+        document.getElementById('splitter-4'),
+        document.getElementById('splitter-5')
     ];
     const allPanes = [
         document.getElementById('price-pane'),
         document.getElementById('rsi-pane'),
         document.getElementById('macd-pane'),
         document.getElementById('cmf-pane'),
-        document.getElementById('cvd-pane')
+        document.getElementById('cvd-pane'),
+        document.getElementById('roc-pane')
     ];
 
     let draggingSplitter = null;
@@ -570,7 +624,7 @@ function initSplitters() {
             prevPane.style.flex = `0 0 ${newPrevHeight}px`;
             nextPane.style.flex = `0 0 ${newNextHeight}px`;
 
-            [priceChart, rsiChart, macdChart, cmfChart, cvdChart].forEach((chart, i) => {
+            [priceChart, rsiChart, macdChart, cmfChart, cvdChart, rocChart].forEach((chart, i) => {
                 const p = allPanes[i];
                 if (chart && p && p.style.display !== 'none') {
                     chart.resize(p.clientWidth, p.clientHeight);
@@ -605,12 +659,30 @@ async function loadData(isInitial = false) {
     if (currentTF !== 'tick') {
         url += `&anchor=${cvd.anchor}`;
         if (cvd.useCustom) url += `&intrabar_tf=${cvd.customTF}`;
-        url += `&rsi_len=${rsi.len}`;
-        if (rsi.showSma) url += `&rsi_sma_len=${rsi.smaLen}`;
-        url += `&macd_fast=${macd.fast}&macd_slow=${macd.slow}&macd_sig=${macd.sig}`;
+
+        if (rsi.visible) {
+            url += `&rsi_len=${rsi.len}`;
+            if (rsi.showSma) url += `&rsi_sma_len=${rsi.smaLen}`;
+        }
+
+        if (macd.visible) {
+            url += `&macd_fast=${macd.fast}&macd_slow=${macd.slow}&macd_sig=${macd.sig}`;
+        }
+
         if (ema1.visible) url += `&ema1_len=${ema1.len}`;
         if (ema2.visible) url += `&ema2_len=${ema2.len}`;
-        url += `&cmf_len=${indicatorSettings.cmf.len}`;
+
+        if (indicatorSettings.cmf.visible) {
+            url += `&cmf_len=${indicatorSettings.cmf.len}`;
+        }
+
+        if (indicatorSettings.roc.visible) {
+            url += `&roc_len=${indicatorSettings.roc.len}`;
+        }
+
+        if (indicatorSettings.vwap.visible) url += `&vwap=true`;
+
+        url += `&fvg_threshold=${indicatorSettings.fvg.threshold}&fvg_auto=${indicatorSettings.fvg.auto}&fvg_only_today=${indicatorSettings.fvg.onlyToday}`;
     }
 
     try {
@@ -629,6 +701,7 @@ async function loadData(isInitial = false) {
             if (cvdSeries) cvdSeries.setData([]);
             if (cmfSeries) cmfSeries.setData([]);
             if (cvdSeries) cvdSeries.setData([]);
+            if (rocSeries) rocSeries.setData([]);
 
             if (candleSeries) candleSeries.applyOptions({ visible: false });
 
@@ -641,7 +714,7 @@ async function loadData(isInitial = false) {
             updateLegend(); // Clear legend in tick mode
 
             // Hide all indicator panes in tick mode
-            ['rsi', 'macd', 'cmf', 'cvd'].forEach(id => {
+            ['rsi', 'macd', 'cmf', 'cvd', 'roc'].forEach(id => {
                 const pane = document.getElementById(`${id}-pane`);
                 const splitter = pane ? pane.previousElementSibling : null;
                 if (pane) pane.style.display = 'none';
@@ -649,12 +722,12 @@ async function loadData(isInitial = false) {
             });
         } else {
             // Check if visibility changed to decide on flex reset
-            let currentVisibility = ['rsi', 'macd', 'cvd'].map(id => indicatorSettings[id].visible).join(',');
+            let currentVisibility = ['rsi', 'macd', 'cvd', 'roc'].map(id => indicatorSettings[id].visible).join(',');
             const visibilityChanged = currentVisibility !== lastVisibilityState;
             lastVisibilityState = currentVisibility;
 
             // Show/Hide panes based on config or TF
-            ['rsi', 'macd', 'cmf', 'cvd'].forEach(id => {
+            ['rsi', 'macd', 'cmf', 'cvd', 'roc'].forEach(id => {
                 const isVisible = indicatorSettings[id].visible;
                 const pane = document.getElementById(`${id}-pane`);
                 // Splitter is PREVIOUS sibling
@@ -677,7 +750,8 @@ async function loadData(isInitial = false) {
                     { chart: rsiChart, id: 'rsi-pane' },
                     { chart: macdChart, id: 'macd-pane' },
                     { chart: cmfChart, id: 'cmf-pane' },
-                    { chart: cvdChart, id: 'cvd-pane' }
+                    { chart: cvdChart, id: 'cvd-pane' },
+                    { chart: rocChart, id: 'roc-pane' }
                 ].forEach(item => {
                     const el = document.getElementById(item.id);
                     if (item.chart && el && el.style.display !== 'none') {
@@ -692,7 +766,10 @@ async function loadData(isInitial = false) {
             }
             if (candleSeries) candleSeries.applyOptions({ visible: true });
 
-            updateSeriesData(data, isInitial);
+            updateSeriesData(data.candles, isInitial);
+            fvgData = data.fvg || [];
+            updateLegend();
+            requestAnimationFrame(drawFRVP);
         }
 
         if (isInitial) {
@@ -712,7 +789,7 @@ async function loadData(isInitial = false) {
 }
 
 function updateHorizontalLines() {
-    const seriesMap = { rsi: rsiSeries, macd: macdSeries, cmf: cmfSeries, cvd: cvdSeries };
+    const seriesMap = { rsi: rsiSeries, macd: macdSeries, cmf: cmfSeries, cvd: cvdSeries, roc: rocSeries };
     Object.keys(seriesMap).forEach(pane => {
         const series = seriesMap[pane];
         if (!series) return;
@@ -789,10 +866,23 @@ function openSettings(pane) {
             <div class="setting-row"><label>Show Low Ref</label><input type="checkbox" id="set-cvd-showLowRef" ${settings.showLowRef ? 'checked' : ''}></div>
             <div class="setting-row"><label>Visible</label><input type="checkbox" id="set-cvd-visible" ${settings.visible ? 'checked' : ''}></div>
         `;
+    } else if (pane === 'roc') {
+        html += `
+            <div class="setting-row"><label>ROC Period</label><input type="number" id="set-roc-len" value="${settings.len}"></div>
+            <div class="setting-row"><label>Color</label><input type="color" id="set-roc-color" value="${settings.color}"></div>
+            <div class="setting-row"><label>Width</label><input type="number" id="set-roc-width" value="${settings.width}"></div>
+            <div class="setting-row"><label>Visible</label><input type="checkbox" id="set-roc-visible" ${settings.visible ? 'checked' : ''}></div>
+        `;
     } else if (pane === 'cmf') {
         html += `
             <div class="setting-row"><label>CMF Period</label><input type="number" id="set-cmf-len" value="${settings.len}"></div>
             <div class="setting-row"><label>Visible</label><input type="checkbox" id="set-cmf-visible" ${settings.visible ? 'checked' : ''}></div>
+        `;
+    } else if (pane === 'vwap') {
+        html += `
+            <div class="setting-row"><label>Color</label><input type="color" id="set-vwap-color" value="${settings.color}"></div>
+            <div class="setting-row"><label>Width</label><input type="number" id="set-vwap-width" value="${settings.width}"></div>
+            <div class="setting-row"><label>Visible</label><input type="checkbox" id="set-vwap-visible" ${settings.visible ? 'checked' : ''}></div>
         `;
     } else if (pane === 'frvp') {
         html += `
@@ -828,6 +918,19 @@ function openSettings(pane) {
             <div class="setting-row"><label>Color</label><input type="color" id="set-ema-color" value="${settings.color}"></div>
             <div class="setting-row"><label>Width</label><input type="number" id="set-ema-width" value="${settings.width}"></div>
             <div class="setting-row"><label>Visible</label><input type="checkbox" id="set-ema-visible" ${settings.visible ? 'checked' : ''}></div>
+        `;
+    } else if (pane === 'fvg') {
+        html += `
+            <div class="setting-row"><label>Threshold %</label><input type="number" id="set-fvg-threshold" value="${settings.threshold}" step="0.1"></div>
+            <div class="setting-row"><label>Auto</label><input type="checkbox" id="set-fvg-auto" ${settings.auto ? 'checked' : ''}></div>
+            <div class="setting-row"><label>Bull Color</label><input type="color" id="set-fvg-bullColor" value="${settings.bullColor.startsWith('rgba') ? '#089981' : settings.bullColor}"></div>
+            <div class="setting-row"><label>Bear Color</label><input type="color" id="set-fvg-bearColor" value="${settings.bearColor.startsWith('rgba') ? '#f23645' : settings.bearColor}"></div>
+            <div class="setting-row"><label>Show Only Present Day</label><input type="checkbox" id="set-fvg-onlyToday" ${settings.onlyToday ? 'checked' : ''}></div>
+            <div class="setting-row"><label>Visible</label><input type="checkbox" id="set-fvg-visible" ${settings.visible ? 'checked' : ''}></div>
+            <hr>
+            <div class="setting-row">
+                <button class="btn-primary" onclick="createFVGReport()" style="width: 100%; padding: 8px; margin-top: 5px;">📄 Create FVG Details (.txt)</button>
+            </div>
         `;
     }
 
@@ -877,9 +980,19 @@ function saveSettings() {
         settings.showHighRef = document.getElementById('set-cvd-showHighRef').checked;
         settings.showLowRef = document.getElementById('set-cvd-showLowRef').checked;
         settings.visible = document.getElementById('set-cvd-visible').checked;
+    } else if (pane === 'roc') {
+        settings.len = parseInt(document.getElementById('set-roc-len').value);
+        settings.color = document.getElementById('set-roc-color').value;
+        settings.width = parseInt(document.getElementById('set-roc-width').value);
+        settings.visible = document.getElementById('set-roc-visible').checked;
     } else if (pane === 'cmf') {
         settings.len = parseInt(document.getElementById('set-cmf-len').value);
         settings.visible = document.getElementById('set-cmf-visible').checked;
+        loadData(false);
+    } else if (pane === 'vwap') {
+        settings.color = document.getElementById('set-vwap-color').value;
+        settings.width = parseInt(document.getElementById('set-vwap-width').value);
+        settings.visible = document.getElementById('set-vwap-visible').checked;
         loadData(false);
     } else if (pane === 'frvp') {
         settings.layout = document.getElementById('set-frvp-layout').value;
@@ -905,6 +1018,14 @@ function saveSettings() {
         settings.width = parseInt(document.getElementById('set-ema-width').value);
         settings.visible = document.getElementById('set-ema-visible').checked;
         updateLegend();
+    } else if (pane === 'fvg') {
+        settings.threshold = parseFloat(document.getElementById('set-fvg-threshold').value);
+        settings.auto = document.getElementById('set-fvg-auto').checked;
+        settings.bullColor = hexToRgba(document.getElementById('set-fvg-bullColor').value, 0.3);
+        settings.bearColor = hexToRgba(document.getElementById('set-fvg-bearColor').value, 0.3);
+        settings.extend = parseInt(document.getElementById('set-fvg-extend').value);
+        settings.onlyToday = document.getElementById('set-fvg-onlyToday').checked;
+        settings.visible = document.getElementById('set-fvg-visible').checked;
     }
 
     // Save Horizontal Lines
@@ -937,6 +1058,7 @@ function changeSymbol(symbol) {
     currentSymbol = symbol;
     frvpData = null; // Force refresh profile for new symbol
     window.lastFRVPLogTime = null; // Allow new logs
+    updateSymbolDisplay();
     loadData(true);
 }
 function changeTF(tf) {
@@ -945,6 +1067,7 @@ function changeTF(tf) {
     frvpData = null; // Force refresh profile for new timeframe
     window.lastFRVPLogTime = null; // Allow new logs
     document.querySelectorAll('#tf-selector button').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') === tf));
+    updateSymbolDisplay();
     loadData(true);
 }
 
@@ -1128,8 +1251,67 @@ async function loadFRVP() {
     }
 }
 
+function drawFVG() {
+    if (!frvpCanvas || !frvpCtx || !indicatorSettings.fvg.visible || currentTF === 'tick') return;
+
+    const settings = indicatorSettings.fvg;
+    const timeScale = priceChart.timeScale();
+    const visibleRange = timeScale.getVisibleLogicalRange();
+    if (!visibleRange) return;
+
+    fvgData.forEach(fvg => {
+        const xStart = timeScale.timeToCoordinate(fvg.time);
+        if (xStart === null) return;
+
+        // Find xEnd: it's either unmitigated (extend right) or mitigated
+        let xEnd;
+        if (fvg.mitigated && fvg.mitigation_time) {
+            xEnd = timeScale.timeToCoordinate(fvg.mitigation_time);
+            // If the mitigation bar is not on screen or timeToCoordinate fails, fallback
+            if (xEnd === null) {
+                const barIndex = timeScale.coordinateToLogical(xStart);
+                xEnd = timeScale.logicalToCoordinate(barIndex + settings.extend);
+            }
+        } else {
+            // Extend by 'extend' bars from detection
+            const barIndex = timeScale.coordinateToLogical(xStart);
+            xEnd = timeScale.logicalToCoordinate(barIndex + settings.extend);
+        }
+
+        const yMax = candleSeries.priceToCoordinate(fvg.top);
+        const yMin = candleSeries.priceToCoordinate(fvg.bottom);
+
+        if (yMax === null || yMin === null) return;
+
+        frvpCtx.fillStyle = fvg.is_bull ? settings.bullColor : settings.bearColor;
+        frvpCtx.fillRect(xStart, yMax, xEnd - xStart, yMin - yMax);
+
+        // Add a border to help distinguish overlapping FVGs
+        frvpCtx.strokeStyle = fvg.is_bull ?
+            settings.bullColor.replace('0.3', '0.7') :
+            settings.bearColor.replace('0.3', '0.7');
+        frvpCtx.lineWidth = 1;
+        frvpCtx.strokeRect(xStart, yMax, xEnd - xStart, yMin - yMax);
+
+        // If mitigated, maybe draw a dashed line at the level if enabled
+        if (fvg.mitigated && settings.mitigationLevels) {
+            frvpCtx.setLineDash([5, 5]);
+            frvpCtx.strokeStyle = fvg.is_bull ? settings.bullColor : settings.bearColor;
+            frvpCtx.beginPath();
+            const yLevel = fvg.is_bull ? yMin : yMax;
+            frvpCtx.moveTo(xStart, yLevel);
+            frvpCtx.lineTo(xEnd, yLevel);
+            frvpCtx.stroke();
+            frvpCtx.setLineDash([]);
+        }
+    });
+}
+
 function drawFRVP() {
     if (!frvpCanvas || !frvpCtx) return;
+
+    // Clear canvas before redrawing
+    frvpCtx.clearRect(0, 0, frvpCanvas.width, frvpCanvas.height);
 
     // Match canvas size to container properly (accounting for device pixel ratio if needed)
     const rect = frvpCanvas.parentElement.getBoundingClientRect();
@@ -1138,9 +1320,9 @@ function drawFRVP() {
         frvpCanvas.height = rect.height;
     }
 
-    frvpCtx.clearRect(0, 0, frvpCanvas.width, frvpCanvas.height);
-
     if (rangeToolActive || activeRanges.length > 0) drawRangeTool();
+
+    drawFVG();
 
     if (!frvpToolActive || currentTF === 'tick' || !indicatorSettings.frvp.visible) return;
     if (!frvpRange.start) return;
@@ -1294,6 +1476,15 @@ function removeFRVP() {
     if (icon) icon.style.display = 'none';
     requestAnimationFrame(drawFRVP);
     updateFRVPAxisLabels(); // Clear lines
+}
+
+function toggleFVG() {
+    indicatorSettings.fvg.visible = !indicatorSettings.fvg.visible;
+    const btn = document.getElementById('fvg-toggle-btn');
+    if (btn) btn.classList.toggle('active', indicatorSettings.fvg.visible);
+    updateLegend();
+    updateSymbolDisplay();
+    requestAnimationFrame(drawFRVP);
 }
 
 function toggleRangeTool() {
@@ -1564,16 +1755,34 @@ function updateLegend() {
     }
 
     let html = '';
-    ['ema1', 'ema2', 'cmf'].forEach(id => {
+    ['ema1', 'ema2', 'vwap', 'cmf', 'fvg', 'roc'].forEach(id => {
         const item = indicatorSettings[id];
         if (!item) return;
-        const visIcon = item.visible ? '👁️' : '🚫';
-        const label = id === 'cmf' ? `CMF ${item.len}` : `${id.toUpperCase()} ${item.len}`;
+
+        const isVisible = item.visible;
+        const visIcon = isVisible ? '👁️' : '🚫';
+
+        let label = id.toUpperCase();
+        if (id === 'cmf' || id === 'ema1' || id === 'ema2' || id === 'roc') label = (id === 'cmf' ? 'CMF ' : id.toUpperCase() + ' ') + item.len;
+        if (id === 'fvg') {
+            const bullCount = fvgData.filter(f => f.is_bull).length;
+            const bearCount = fvgData.filter(f => !f.is_bull).length;
+            label = `FVG ${item.auto ? 'Auto' : item.threshold + '%'} (${bullCount}🟢 ${bearCount}🔴)`;
+        }
+
+        // Color for legend pill
+        let color = item.color || '#43A047';
+        if (id === 'fvg') color = 'rgba(35, 209, 139, 0.6)';
+        if (id === 'vwap') color = '#2196F3';
+        if (id === 'roc') color = item.color;
+
+        const toggleFn = id === 'fvg' ? 'toggleFVG()' : `toggleIndicatorVisibility('${id}')`;
+
         html += `
-            <div class="legend-item" style="border-left: 3px solid ${item.color || '#43A047'}">
+            <div class="legend-item" style="border-left: 3px solid ${color}">
                 <span class="legend-label">${label}</span>
                 <div class="legend-controls">
-                    <button class="legend-btn" onclick="toggleEmaVisibility('${id}')" title="Toggle Visibility">${visIcon}</button>
+                    <button class="legend-btn" onclick="${toggleFn}" title="Toggle Visibility">${visIcon}</button>
                     <button class="legend-btn" onclick="openSettings('${id}')" title="Settings">⚙️</button>
                 </div>
             </div>
@@ -1599,6 +1808,17 @@ function updateLegend() {
     container.innerHTML = html;
 }
 
+function toggleIndicatorVisibility(id) {
+    if (indicatorSettings[id]) {
+        indicatorSettings[id].visible = !indicatorSettings[id].visible;
+        if (id === 'fvg') {
+            toggleFVG(); // Reuse toggleFVG for consistency
+        } else {
+            loadData(false); // Reload for others (EMA/VWAP/CMF on price chart are series)
+        }
+    }
+}
+
 function toggleFrvpVisibility() {
     indicatorSettings.frvp.visible = !indicatorSettings.frvp.visible;
     requestAnimationFrame(drawFRVP);
@@ -1615,6 +1835,7 @@ function updateSeriesData(data, isInitial = false) {
         window.lastCandleTime = data[data.length - 1].time;
         if (currentTF !== 'tick' && !isReplayMode) {
             applyDefaultFRVPRange(data);
+            updateAlertMarkers(data);
         }
     }
 
@@ -1630,7 +1851,7 @@ function updateSeriesData(data, isInitial = false) {
     if (ema1Series) {
         if (ema1.visible) {
             ema1Series.applyOptions({ visible: true, color: ema1.color, lineWidth: ema1.width });
-            ema1Series.setData(data.filter(d => d.ema1 !== null).map(d => ({ time: d.time, value: d.ema1 })));
+            ema1Series.setData(data.map(d => ({ time: d.time, value: d.ema1 })));
         } else {
             ema1Series.applyOptions({ visible: false });
         }
@@ -1639,48 +1860,106 @@ function updateSeriesData(data, isInitial = false) {
     if (ema2Series) {
         if (ema2.visible) {
             ema2Series.applyOptions({ visible: true, color: ema2.color, lineWidth: ema2.width });
-            ema2Series.setData(data.filter(d => d.ema2 !== null).map(d => ({ time: d.time, value: d.ema2 })));
+            ema2Series.setData(data.map(d => ({ time: d.time, value: d.ema2 })));
         } else {
             ema2Series.applyOptions({ visible: false });
         }
     }
 
+    if (vwapSeries) {
+        if (indicatorSettings.vwap.visible) {
+            vwapSeries.applyOptions({ visible: true, color: indicatorSettings.vwap.color, lineWidth: indicatorSettings.vwap.width });
+            vwapSeries.setData(data.map(d => ({ time: d.time, value: d.vwap })));
+        } else {
+            vwapSeries.applyOptions({ visible: false });
+        }
+    }
+
     updateLegend();
 
-    if (rsiSeries) rsiSeries.setData(data.filter(d => d.rsi !== null).map(d => ({ time: d.time, value: d.rsi })));
+    if (rsiSeries) rsiSeries.setData(data.map(d => ({ time: d.time, value: d.rsi })));
 
     if (rsiSmaSeries) {
         if (rsi.showSma) {
             rsiSmaSeries.applyOptions({ visible: true, color: rsi.smaColor, lineWidth: rsi.smaWidth });
-            rsiSmaSeries.setData(data.filter(d => d.rsi_sma !== null).map(d => ({ time: d.time, value: d.rsi_sma })));
+            rsiSmaSeries.setData(data.map(d => ({ time: d.time, value: d.rsi_sma })));
         } else {
             rsiSmaSeries.applyOptions({ visible: false });
         }
     }
 
-    if (macdSeries) macdSeries.setData(data.filter(d => d.macd !== null).map(d => ({ time: d.time, value: d.macd })));
-    if (macdSignalSeries) macdSignalSeries.setData(data.filter(d => d.macd_s !== null).map(d => ({ time: d.time, value: d.macd_s })));
+    if (macdSeries) macdSeries.setData(data.map(d => ({ time: d.time, value: d.macd })));
+    if (macdSignalSeries) macdSignalSeries.setData(data.map(d => ({ time: d.time, value: d.macd_s })));
     if (macdHistSeries) {
-        macdHistSeries.setData(data.filter(d => d.macd_h !== null).map(d => ({
+        macdHistSeries.setData(data.map(d => ({
             time: d.time, value: d.macd_h,
             color: d.macd_h >= 0 ? 'rgba(35, 209, 139, 0.5)' : 'rgba(255, 69, 96, 0.5)'
         })));
     }
 
     if (cvdSeries) {
-        cvdSeries.setData(data.filter(d => d.cvd_o !== null).map(d => ({
+        cvdSeries.setData(data.map(d => ({
             time: d.time, open: d.cvd_o, high: d.cvd_h, low: d.cvd_l, close: d.cvd_c
         })));
         updateCVDRefLine(data);
     }
 
     if (cmfSeries) {
-        cmfSeries.setData(data.filter(d => d.cmf !== null).map(d => ({
+        cmfSeries.setData(data.map(d => ({
             time: d.time, value: d.cmf
         })));
     }
 
+    if (rocSeries) {
+        rocSeries.setData(data.map(d => ({
+            time: d.time, value: d.roc
+        })));
+    }
+
     updateHorizontalLines();
+}
+
+function updateAlertMarkers(data) {
+    if (!candleSeries || !data || data.length === 0) return;
+
+    // Find alert times for current symbol in watchlistData
+    const symbolInfo = watchlistData.find(s => s.symbol === currentSymbol);
+    if (!symbolInfo || !symbolInfo.alert_times || symbolInfo.alert_times.length === 0) {
+        candleSeries.setMarkers([]);
+        return;
+    }
+
+    const markers = [];
+    const lastCandle = data[data.length - 1];
+    const lastDate = new Date(lastCandle.time * 1000);
+
+    // Calculate start of day for the latest candle (IST-shifted time)
+    // Formula: CurrentTime - (H*3600 + M*60 + S)
+    const h_ist = lastDate.getUTCHours();
+    const m_ist = lastDate.getUTCMinutes();
+    const s_ist = lastDate.getUTCSeconds();
+    const startOfDayIst = lastCandle.time - (h_ist * 3600 + m_ist * 60 + s_ist);
+
+    symbolInfo.alert_times.forEach(tStr => {
+        const [h, m] = tStr.split(':').map(Number);
+        const alertTimestamp = startOfDayIst + (h * 3600 + m * 60);
+
+        // Find if we have a candle at this exact time
+        const hasCandle = data.some(d => d.time === alertTimestamp);
+
+        if (hasCandle) {
+            markers.push({
+                time: alertTimestamp,
+                position: 'aboveBar',
+                color: '#ff4560',
+                shape: 'arrowDown',
+                text: 'ALERT @ ' + tStr,
+                size: 2
+            });
+        }
+    });
+
+    candleSeries.setMarkers(markers.sort((a, b) => a.time - b.time));
 }
 
 // --- 6️⃣ Bar Replay Logic ---
@@ -1829,8 +2108,8 @@ async function handleJumpTo(time) {
     const endpoint = currentTF === 'tick' ? '/ticks' : '/candles';
     let url = `http://127.0.0.1:5000${endpoint}?symbol=${currentSymbol}&tf=${currentTF}`;
 
-    const { rsi, macd, cvd, ema1, ema2, cmf } = indicatorSettings;
-    url += `&anchor=${cvd.anchor}&rsi_len=${rsi.len}&macd_fast=${macd.fast}&macd_slow=${macd.slow}&macd_sig=${macd.sig}&cmf_len=${cmf.len}`;
+    const { rsi, macd, cvd, ema1, ema2, cmf, fvg } = indicatorSettings;
+    url += `&anchor=${cvd.anchor}&rsi_len=${rsi.len}&macd_fast=${macd.fast}&macd_slow=${macd.slow}&macd_sig=${macd.sig}&cmf_len=${cmf.len}&fvg_threshold=${fvg.threshold}&fvg_auto=${fvg.auto}&fvg_only_today=${fvg.onlyToday}`;
     if (ema1.visible) url += `&ema1_len=${ema1.len}`;
     if (ema2.visible) url += `&ema2_len=${ema2.len}`;
 
@@ -1858,20 +2137,40 @@ async function handleJumpTo(time) {
 
 // Global scope for legend & replay functions
 window.toggleFrvpVisibility = toggleFrvpVisibility;
-window.toggleEmaVisibility = toggleEmaVisibility;
+window.toggleIndicatorVisibility = toggleIndicatorVisibility;
+window.toggleFVG = toggleFVG;
+
+async function createFVGReport() {
+    const fvg = indicatorSettings.fvg;
+    const url = `http://127.0.0.1:5000/fvg_report?symbol=${currentSymbol}&tf=${currentTF}&fvg_threshold=${fvg.threshold}&fvg_auto=${fvg.auto}&fvg_only_today=${fvg.onlyToday}`;
+
+    try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error("Failed to generate report");
+        const text = await resp.text();
+
+        // Trigger browser download
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `FVG_Details_${currentSymbol.replace(':', '_')}_${currentTF}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        console.log("FVG Report generated and download triggered.");
+    } catch (e) {
+        console.error("Error creating FVG report:", e);
+        alert("Could not generate FVG report.");
+    }
+}
+window.createFVGReport = createFVGReport;
+
 window.toggleReplayMode = toggleReplayMode;
 window.exitReplayMode = exitReplayMode;
 window.activateJumpTo = activateJumpTo;
 window.togglePlayback = togglePlayback;
 window.replayStepForward = replayStepForward;
 window.updateReplaySpeed = updateReplaySpeed;
-
-function toggleEmaVisibility(id) {
-    if (indicatorSettings[id]) {
-        indicatorSettings[id].visible = !indicatorSettings[id].visible;
-        loadData(false);
-    }
-}
-
-// Global scope for legend functions
-window.toggleEmaVisibility = toggleEmaVisibility;
+window.openSettings = openSettings;
+window.saveSettings = saveSettings;
+window.closeSettings = closeSettings;

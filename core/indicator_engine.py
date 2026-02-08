@@ -6,8 +6,11 @@ from indicators.macd import calculate_macd
 from indicators.cvd import calculate_cvd_base, aggregate_cvd_candles
 from indicators.ema import calculate_ema
 from indicators.cmf import calculate_cmf
+from indicators.vwap import calculate_vwap
+from indicators.fvg import calculate_fvg
+from indicators.roc import calculate_roc
 
-def get_processed_candles(df, tf="1min", intrabar_tf=None, anchor="D", rsi_len=14, rsi_sma_len=None, macd_fast=12, macd_slow=26, macd_sig=9, ema1_len=None, ema2_len=None, cmf_len=20):
+def get_processed_candles(df, tf="1min", intrabar_tf=None, anchor="D", rsi_len=14, rsi_sma_len=None, macd_fast=12, macd_slow=26, macd_sig=9, ema1_len=None, ema2_len=None, cmf_len=20, roc_len=None, show_vwap=False, fvg_threshold=0.0, fvg_auto=False, fvg_only_today=True):
     """
     Enhanced processor: Turns raw ticks OR 1-min candles into CVD Candles and OHLC Indicators.
     """
@@ -66,20 +69,30 @@ def get_processed_candles(df, tf="1min", intrabar_tf=None, anchor="D", rsi_len=1
     final_df['ema1'] = np.nan
     final_df['ema2'] = np.nan
     final_df['cmf'] = np.nan
+    final_df['vwap'] = np.nan
+    final_df['roc'] = np.nan
 
     try:
+        # Calculate VWAP on the base layer if possible for better accuracy, 
+        # but standard VWAP on the chart TF is usually fine for daily reset.
+        if show_vwap:
+            vwap_values = calculate_vwap(final_df, anchor=anchor)
+            if vwap_values is not None:
+                final_df['vwap'] = vwap_values
         # Calculate RSI and MACD on the final aggregated data
-        rsi_values, rsi_sma_values = calculate_rsi(final_df, window=rsi_len, sma_window=rsi_sma_len)
-        if rsi_values is not None:
-            final_df['rsi'] = rsi_values
-        if rsi_sma_values is not None:
-            final_df['rsi_sma'] = rsi_sma_values
+        if rsi_len is not None:
+            rsi_values, rsi_sma_values = calculate_rsi(final_df, window=rsi_len, sma_window=rsi_sma_len)
+            if rsi_values is not None:
+                final_df['rsi'] = rsi_values
+            if rsi_sma_values is not None:
+                final_df['rsi_sma'] = rsi_sma_values
         
-        macd_data = calculate_macd(final_df, fast=macd_fast, slow=macd_slow, signal=macd_sig)
-        if macd_data is not None and not macd_data.empty:
-            final_df['macd'] = macd_data.iloc[:, 0]
-            final_df['macd_h'] = macd_data.iloc[:, 1]
-            final_df['macd_s'] = macd_data.iloc[:, 2]
+        if macd_fast is not None and macd_slow is not None:
+            macd_data = calculate_macd(final_df, fast=macd_fast, slow=macd_slow, signal=macd_sig)
+            if macd_data is not None and not macd_data.empty:
+                final_df['macd'] = macd_data.iloc[:, 0]
+                final_df['macd_h'] = macd_data.iloc[:, 1]
+                final_df['macd_s'] = macd_data.iloc[:, 2]
 
         if ema1_len is not None:
              ema1_values = calculate_ema(final_df, window=ema1_len)
@@ -95,6 +108,11 @@ def get_processed_candles(df, tf="1min", intrabar_tf=None, anchor="D", rsi_len=1
             cmf_values = calculate_cmf(final_df, length=cmf_len)
             if cmf_values is not None:
                 final_df['cmf'] = cmf_values
+        
+        if roc_len is not None:
+            roc_values = calculate_roc(final_df, length=roc_len)
+            if roc_values is not None:
+                final_df['roc'] = roc_values
     except Exception as e:
         print(f"Indicator calculation warning: {e}")
     
@@ -104,4 +122,26 @@ def get_processed_candles(df, tf="1min", intrabar_tf=None, anchor="D", rsi_len=1
     # 7. Convert to IST for display
     final_df["time"] = final_df["time"] + 19800
 
-    return final_df.to_dict("records")
+    # 8. Calculate FVG (independent of indicators on final_df)
+    # New FVG returns a list of dictionaries directly
+    fvg_input = final_df.copy().set_index('time')
+    fvg_records_raw = calculate_fvg(
+        fvg_input, threshold_per=fvg_threshold, auto=fvg_auto, mitigation_check=True, only_today=fvg_only_today
+    )
+    
+    # Map keys to match frontend expectations
+    fvg_records = []
+    for f in fvg_records_raw:
+        fvg_records.append({
+            'time': int(f['t']),
+            'top': float(f['max']),
+            'bottom': float(f['min']),
+            'is_bull': bool(f['isbull']),
+            'mitigated': bool(f['mitigated']),
+            'mitigation_time': int(f['mitigation_time']) if f['mitigation_time'] is not None else None
+        })
+
+    return {
+        "candles": final_df.to_dict("records"),
+        "fvg": fvg_records
+    }

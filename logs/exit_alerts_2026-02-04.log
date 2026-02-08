@@ -1,0 +1,8 @@
+2026-02-04 13:24:14,232 [EXIT] 🚨 [EXIT TRIGGER] NSE:BSE-EQ (LONG) | CMF: -0.0572 < -0.05 | Time: 13:20
+2026-02-04 13:24:14,235 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:BSE-EQ | Side: LONG | Qty: 5 | Order ID: 26020400280138-BO-2
+2026-02-04 13:24:14,963 [EXIT] Exit Response for NSE:BSE-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26020400280138-BO-2'}
+2026-02-04 13:24:14,994 [EXIT] ✅ DB Updated: NSE:BSE-EQ marked as squared off.
+2026-02-04 13:56:17,459 [EXIT] 🚨 [EXIT TRIGGER] NSE:YESBANK-EQ (LONG) | CMF: -0.1484 < -0.05 | Time: 13:55
+2026-02-04 13:56:17,460 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:YESBANK-EQ | Side: LONG | Qty: 5 | Order ID: 26020400228285-BO-3
+2026-02-04 13:56:18,155 [EXIT] Exit Response for NSE:YESBANK-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26020400228285-BO-3'}
+2026-02-04 13:56:18,190 [EXIT] ✅ DB Updated: NSE:YESBANK-EQ marked as squared off.

@@ -11,6 +11,9 @@ def calculate_rsi(data, window=14, sma_window=None):
         close_prices = data
         
     rsi = ta.rsi(close_prices, length=window)
+    if rsi is not None:
+        import numpy as np
+        rsi.iloc[:window] = np.nan
     
     rsi_sma = None
     if rsi is not None and sma_window:

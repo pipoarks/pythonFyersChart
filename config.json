@@ -1,15 +1,15 @@
 {
     "indicators": {
         "ema1": {
-            "visible": false,
+            "visible": true,
             "len": 21
         },
         "ema2": {
-            "visible": false,
+            "visible": true,
             "len": 9
         },
         "rsi": {
-            "visible": true,
+            "visible": false,
             "len": 20,
             "smaLen": 8,
             "showSma": false
@@ -21,7 +21,7 @@
             "sig": 9
         },
         "cvd": {
-            "visible": true,
+            "visible": false,
             "anchor": "D",
             "refCandles": 16,
             "showHighRef": true,
@@ -30,6 +30,11 @@
         "cmf": {
             "visible": true,
             "len": 20
+        },
+        "vwap": {
+            "visible": false,
+            "color": "#800080",
+            "width": 4
         },
         "frvp": {
             "visible": true,
@@ -45,33 +50,82 @@
                     "m": 25
                 }
             }
+        },
+        "fvg": {
+            "visible": false,
+            "threshold": 0,
+            "auto": false,
+            "extend": 20,
+            "bullColor": "rgba(8, 153, 129, 0.3)",
+            "bearColor": "rgba(242, 54, 69, 0.3)"
+        },
+        "roc": {
+            "visible": true,
+            "len": 3
         }
     },
     "default_tf": "5min",
-    "default_symbol": "NSE:TATAPOWER-EQ",
+    "default_symbol": "NSE:NATIONALUM-EQ",
     "watchlist": [
-        "NSE:POWERINDIA-EQ",
-        "NSE:MCX-EQ",
-        "NSE:HDFCAMC-EQ",
-        "NSE:GODREJPROP-EQ",
-        "NSE:JINDALSTEL-EQ",
-        "NSE:HINDALCO-EQ",
-        "NSE:INDIANB-EQ",
-        "NSE:DLF-EQ",
-        "NSE:OIL-EQ",
-        "NSE:COALINDIA-EQ",
-        "NSE:JSWENERGY-EQ",
-        "NSE:NATIONALUM-EQ",
-        "NSE:PFC-EQ",
-        "NSE:RECLTD-EQ",
-        "NSE:TATAPOWER-EQ",
-        "NSE:NTPC-EQ",
-        "NSE:PETRONET-EQ",
-        "NSE:MANAPPURAM-EQ",
-        "NSE:LTF-EQ",
-        "NSE:HUDCO-EQ",
-        "NSE:GAIL-EQ",
-        "NSE:CANBK-EQ",
-        "NSE:SAMMAANCAP-EQ"
+        {
+            "symbol": "NSE:OFSS-EQ",
+            "alert_times": [
+                "12:31"
+            ]
+        },
+        {
+            "symbol": "NSE:HUDCO-EQ",
+            "alert_times": [
+                "10:37"
+            ]
+        },
+        {
+            "symbol": "NSE:BHEL-EQ",
+            "alert_times": [
+                "10:37"
+            ]
+        },
+        {
+            "symbol": "NSE:DRREDDY-EQ",
+            "alert_times": [
+                "10:36"
+            ]
+        },
+        {
+            "symbol": "NSE:TATATECH-EQ",
+            "alert_times": [
+                "10:34"
+            ]
+        },
+        {
+            "symbol": "NSE:TATAELXSI-EQ",
+            "alert_times": [
+                "10:34"
+            ]
+        },
+        {
+            "symbol": "NSE:SOLARINDS-EQ",
+            "alert_times": [
+                "10:34"
+            ]
+        },
+        {
+            "symbol": "NSE:NATIONALUM-EQ",
+            "alert_times": [
+                "10:37"
+            ]
+        },
+        {
+            "symbol": "NSE:IEX-EQ",
+            "alert_times": [
+                "10:37"
+            ]
+        },
+        {
+            "symbol": "NSE:IDEA-EQ",
+            "alert_times": [
+                "10:37"
+            ]
+        }
     ]
 }

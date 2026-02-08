@@ -35,7 +35,7 @@ body {
 
 .brand {
     font-size: 1.2rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--accent-color);
     letter-spacing: -0.5px;
 }
@@ -174,9 +174,31 @@ button:hover {
 
 button.active,
 #frvp-btn.active,
-#range-btn.active {
+#range-btn.active,
+#fvg-toggle-btn.active {
     background: var(--accent-color);
     color: white;
+}
+
+.fvg-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px;
+    border-radius: 4px;
+}
+
+.small-btn {
+    padding: 2px 4px;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.small-btn:hover {
+    opacity: 1;
 }
 
 /* Multi-Pane Layout */

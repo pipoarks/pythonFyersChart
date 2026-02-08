@@ -1,0 +1,20 @@
+2026-02-05 11:18:36,461 [EXIT] 🚨 [EXIT TRIGGER] NSE:MAZDOCK-EQ (SHORT) | CMF: 0.1004 > 0.05 | Time: 11:15
+2026-02-05 11:18:36,464 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:MAZDOCK-EQ | Side: SHORT | Qty: 21 | Order ID: 26020500151414-BO-3
+2026-02-05 11:18:37,133 [EXIT] Exit Response for NSE:MAZDOCK-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26020500151414-BO-3'}
+2026-02-05 11:18:37,206 [EXIT] ✅ DB Updated: NSE:MAZDOCK-EQ marked as squared off.
+2026-02-05 11:28:12,634 [EXIT] 🚨 [EXIT TRIGGER] NSE:LAURUSLABS-EQ (SHORT) | CMF: 0.1278 > 0.05 | Time: 11:25
+2026-02-05 11:28:12,635 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:LAURUSLABS-EQ | Side: SHORT | Qty: 52 | Order ID: 26020500172164-BO-2
+2026-02-05 11:28:13,581 [EXIT] Exit Response for NSE:LAURUSLABS-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26020500172164-BO-2'}
+2026-02-05 11:28:13,635 [EXIT] ✅ DB Updated: NSE:LAURUSLABS-EQ marked as squared off.
+2026-02-05 12:37:35,154 [EXIT] 🚨 [EXIT TRIGGER] NSE:GODREJPROP-EQ (SHORT) | CMF: 0.0537 > 0.05 | Time: 12:35
+2026-02-05 12:37:36,578 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:GODREJPROP-EQ | Side: SHORT | Qty: 29 | Order ID: 26020500200870-BO-2
+2026-02-05 12:37:37,267 [EXIT] Exit Response for NSE:GODREJPROP-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26020500200870-BO-2'}
+2026-02-05 12:37:37,465 [EXIT] ✅ DB Updated: NSE:GODREJPROP-EQ marked as squared off.
+2026-02-05 13:45:45,310 [EXIT] 🚨 [EXIT TRIGGER] NSE:360ONE-EQ (SHORT) | CMF: 0.0632 > 0.05 | Time: 13:40
+2026-02-05 13:45:45,310 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:360ONE-EQ | Side: SHORT | Qty: 44 | Order ID: 26020500196270-BO-3
+2026-02-05 13:45:45,967 [EXIT] Exit Response for NSE:360ONE-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26020500196270-BO-3'}
+2026-02-05 13:45:47,410 [EXIT] ✅ DB Updated: NSE:360ONE-EQ marked as squared off.
+2026-02-05 15:09:53,431 [EXIT] 🚨 [EXIT TRIGGER] NSE:BHARTIARTL-EQ (SHORT) | CMF: 0.0816 > 0.05 | Time: 15:05
+2026-02-05 15:09:53,432 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:BHARTIARTL-EQ | Side: SHORT | Qty: 25 | Order ID: 26020500373136-BO-3
+2026-02-05 15:09:54,531 [EXIT] Exit Response for NSE:BHARTIARTL-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26020500373136-BO-3'}
+2026-02-05 15:09:55,746 [EXIT] ✅ DB Updated: NSE:BHARTIARTL-EQ marked as squared off.

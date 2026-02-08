@@ -39,30 +39,10 @@ alert_logger.addHandler(alert_fh)
 # ==========================================
 TIMEFRAME = "5min"
 
-SYMBOLS = [
-  "NSE:POWERINDIA-EQ",
-  "NSE:MCX-EQ",
-  "NSE:HDFCAMC-EQ",
-  "NSE:GODREJPROP-EQ",
-  "NSE:JINDALSTEL-EQ",
-  "NSE:HINDALCO-EQ",
-  "NSE:INDIANB-EQ",
-  "NSE:DLF-EQ",
-  "NSE:OIL-EQ",
-  "NSE:COALINDIA-EQ",
-  "NSE:JSWENERGY-EQ",
-  "NSE:NATIONALUM-EQ",
-  "NSE:PFC-EQ",
-  "NSE:RECLTD-EQ",
-  "NSE:TATAPOWER-EQ",
-  "NSE:NTPC-EQ",
-  "NSE:PETRONET-EQ",
-  "NSE:MANAPPURAM-EQ",
-  "NSE:LTF-EQ",
-  "NSE:HUDCO-EQ",
-  "NSE:GAIL-EQ",
-  "NSE:CANBK-EQ",
-  "NSE:SAMMAANCAP-EQ"
+SYMBOLS = [  
+"NSE:HINDZINC-EQ",   
+  
+"NSE:PETRONET-EQ"
 ]
 
 # State to track alerts and prevent repeated notifications for the same candle
@@ -209,11 +189,12 @@ def check_alerts():
                 continue
 
             # 2. Process Data for Monitoring Timeframe
-            processed_data = get_processed_candles(df_1min, tf=TIMEFRAME)
-            if not processed_data or len(processed_data) < 2:
+            processed_raw = get_processed_candles(df_1min, tf=TIMEFRAME)
+            if not processed_raw or not processed_raw.get('candles') or len(processed_raw['candles']) < 2:
                 continue
 
-            last_candle = processed_data[-2]
+            processed_candles = processed_raw['candles']
+            last_candle = processed_candles[-2]
             timestamp = last_candle['time']
             time_str = datetime.fromtimestamp(timestamp - 19800).strftime('%H:%M')
             
@@ -237,7 +218,7 @@ def check_alerts():
             # Usually Ref Line is "Day's first N candles". If we use processed_data (5min), refCandles=3 means first 15 mins.
             # If we used raw 1min, refCandles=3 means first 3 mins.
             # Given processed_data is passed, it uses the global TIMEFRAME (5min).
-            cvd_ref_level = calculate_cvd_reference(pd.DataFrame(processed_data))
+            cvd_ref_level = calculate_cvd_reference(pd.DataFrame(processed_candles))
             
             if cvd_ref_level is None:
                 continue
@@ -301,13 +282,15 @@ def print_startup_summary():
                 logger.info(f"❌ {symbol}: No Data Available")
                 continue
                 
-            processed_data = get_processed_candles(df_1min, tf=TIMEFRAME)
-            if not processed_data:
+            processed_raw = get_processed_candles(df_1min, tf=TIMEFRAME)
+            if not processed_raw or not processed_raw.get('candles'):
                 logger.info(f"❌ {symbol}: Insufficient Data for {TIMEFRAME}")
                 continue
+            
+            processed_candles = processed_raw['candles']
                 
             # Calculate CVD Ref
-            cvd_ref = calculate_cvd_reference(pd.DataFrame(processed_data))
+            cvd_ref = calculate_cvd_reference(pd.DataFrame(processed_candles))
             
             # Calculate FRVP (Optional to print here, but useful)
             frvp_res, _ = calculate_frvp_for_today(symbol, df_1min)
@@ -325,11 +308,11 @@ def print_startup_summary():
 
 if __name__ == "__main__":
     print_startup_summary()
-    logger.info("🚀 Strategy Alert Monitoring Started...")
+    logger.info("🚀 Buy Alert Monitoring Started...")
     
     try:
         while True:
             check_alerts()
             time.sleep(60) 
     except KeyboardInterrupt:
-        logger.info("👋 Monitoring stopped by user.")
+        logger.info("👋  Buy Alert Monitoring stopped by user.")

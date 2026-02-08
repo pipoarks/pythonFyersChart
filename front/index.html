@@ -16,7 +16,7 @@
 <body>
 
     <div class="navbar">
-        <div class="brand">LiveTick Pro</div>
+        <div id="symbol-display" class="brand"></div>
 
         <div class="controls">
             <!-- Symbol Selector Dropdown -->
@@ -41,6 +41,10 @@
                 <button id="frvp-btn" onclick="toggleFRVPTool()">FRVP</button>
                 <button id="range-btn" onclick="toggleRangeTool()">Range</button>
                 <button id="replay-btn" onclick="toggleReplayMode()">Replay</button>
+                <div class="fvg-group">
+                    <button id="fvg-toggle-btn" class="active" onclick="toggleFVG()">FVG</button>
+                    <button class="small-btn" onclick="openSettings('fvg')">⚙️</button>
+                </div>
             </div>
         </div>
     </div>
@@ -68,6 +72,7 @@
                 style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 10;"></canvas>
             <div class="pane-header">
                 <span class="pane-title">Price</span>
+                <span class="settings-icon" onclick="openSettings('fvg')" title="FVG Settings">🪄</span>
                 <span class="settings-icon" onclick="openSettings('frvp')" style="display:none;"
                     id="frvp-settings-icon">⚙️</span>
             </div>
@@ -116,6 +121,17 @@
             <div class="pane-header">
                 <span class="pane-title">CVD</span>
                 <span class="settings-icon" onclick="openSettings('cvd')">⚙️</span>
+            </div>
+        </div>
+
+        <!-- Draggable Splitter 5 -->
+        <div class="splitter" id="splitter-5"></div>
+
+        <!-- ROC Pane -->
+        <div id="roc-pane" class="chart-pane">
+            <div class="pane-header">
+                <span class="pane-title">ROC</span>
+                <span class="settings-icon" onclick="openSettings('roc')">⚙️</span>
             </div>
         </div>
     </div>

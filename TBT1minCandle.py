@@ -110,11 +110,25 @@ def onerror(message):
 def onclose(message):
     print("Connection closed:", message)
 
-# Replace with actual token
-access_token = "E3D5D0NFAV-100:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCcGV0aVBRVEc0YWQxZFlSSjhPcnZqNGZsRnFsRlpENFpWX0R4T1RncjI1dE11aWNtSFpTcmd5Y2QzbllKcDlIdVlKX0M5dkkwOWFfbENHeXJuZi04X2tqQ2tXODVpN0hpZ2JERUtmcG04OWcyZmlvcz0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJlM2VlNThiMzBhYWVhMjdmYzE0MmY1YTQ2Zjc1NGM4OWQ2MGFmZmVhNTBjZWI2YzEwNWJmNDFhOCIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWUE0NDA3NyIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzY5NzMzMDAwLCJpYXQiOjE3Njk2NTg1MTEsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc2OTY1ODUxMSwic3ViIjoiYWNjZXNzX3Rva2VuIn0.KPLpVpkrZmyn0ezYYJ5upgHXd317f0F0Uipcc5KjeCQ"
+def get_access_token():
+    file_path = "D:\\FyersAccesstoken.txt"
+    try:
+        with open(file_path, "r") as f:
+            token = f.read().strip()
+            print(f"✅ Loaded access token from {file_path}")
+            return token
+    except Exception as e:
+        print(f"❌ Error reading access token from {file_path}: {e}")
+        # Return a placeholder or raise error to prevent connection failure loops if critical
+        return ""
+
+# Fetch access token from file
+# Fetch access token from file
+accesstoken = get_access_token()
+Complete_access_token = f"E3D5D0NFAV-100:{accesstoken}"
 
 fyers = data_ws.FyersDataSocket(
-    access_token=access_token,
+    access_token=Complete_access_token,
     write_to_file=False,
     log_path="",
     reconnect=True,
@@ -130,6 +144,7 @@ if __name__ == "__main__":
     init_candle_db.init_db()
     
     try:
+        print("Connecting to Fyers with access token: ", Complete_access_token)
         fyers.connect()
     except KeyboardInterrupt:
         print("Stopping...")
