@@ -1,0 +1,66 @@
+2026-02-08 22:26:06,343 [INFO] ==================================================
+2026-02-08 22:26:06,343 [INFO] 🚀 INITIALIZING STRATEGY ALERTS (5min)
+2026-02-08 22:26:06,344 [INFO] ==================================================
+2026-02-08 22:26:06,344 [INFO] 📅 FRVP Configuration:
+2026-02-08 22:26:06,345 [INFO]    • Range: 09:15 - 10:25
+2026-02-08 22:26:06,345 [INFO]    • Rows: 24 | VA%: 70
+2026-02-08 22:26:06,345 [INFO] 
+🌊 CVD Configuration:
+2026-02-08 22:26:06,346 [INFO]    • Anchor: D
+2026-02-08 22:26:06,346 [INFO]    • Ref Candles: First 16 candles of the day
+2026-02-08 22:26:06,346 [INFO] --------------------------------------------------
+2026-02-08 22:26:06,347 [INFO] ⏳ calculating reference levels for all symbols...
+2026-02-08 22:26:06,573 [INFO] ✅ NSE:POLYCAB-EQ       | CVD Ref (1st 16 c):   4240 | FRVP VAH:      N/A
+2026-02-08 22:26:06,690 [INFO] ✅ NSE:TRENT-EQ         | CVD Ref (1st 16 c):  25869 | FRVP VAH:      N/A
+2026-02-08 22:26:06,813 [INFO] ✅ NSE:SIEMENS-EQ       | CVD Ref (1st 16 c):  14317 | FRVP VAH:      N/A
+2026-02-08 22:26:06,905 [INFO] ✅ NSE:BSE-EQ           | CVD Ref (1st 16 c): 222871 | FRVP VAH:      N/A
+2026-02-08 22:26:07,015 [INFO] ✅ NSE:HDFCAMC-EQ       | CVD Ref (1st 16 c):  10918 | FRVP VAH:      N/A
+2026-02-08 22:26:07,111 [INFO] ✅ NSE:APLAPOLLO-EQ     | CVD Ref (1st 16 c): 178889 | FRVP VAH:      N/A
+2026-02-08 22:26:07,216 [INFO] ✅ NSE:HINDPETRO-EQ     | CVD Ref (1st 16 c):  11135 | FRVP VAH:      N/A
+2026-02-08 22:26:07,318 [INFO] ✅ NSE:COALINDIA-EQ     | CVD Ref (1st 16 c): 147141 | FRVP VAH:      N/A
+2026-02-08 22:26:07,424 [INFO] ✅ NSE:BPCL-EQ          | CVD Ref (1st 16 c): 192975 | FRVP VAH:      N/A
+2026-02-08 22:26:07,528 [INFO] ✅ NSE:NATIONALUM-EQ    | CVD Ref (1st 16 c): 780207 | FRVP VAH:      N/A
+2026-02-08 22:26:07,643 [INFO] ✅ NSE:TATAPOWER-EQ     | CVD Ref (1st 16 c): 129596 | FRVP VAH:      N/A
+2026-02-08 22:26:07,740 [INFO] ✅ NSE:EXIDEIND-EQ      | CVD Ref (1st 16 c):  76210 | FRVP VAH:      N/A
+2026-02-08 22:26:07,836 [INFO] ✅ NSE:ONGC-EQ          | CVD Ref (1st 16 c): 613554 | FRVP VAH:      N/A
+2026-02-08 22:26:07,935 [INFO] ✅ NSE:ASHOKLEY-EQ      | CVD Ref (1st 16 c): 434225 | FRVP VAH:      N/A
+2026-02-08 22:26:08,044 [INFO] ✅ NSE:IOC-EQ           | CVD Ref (1st 16 c): 379707 | FRVP VAH:      N/A
+2026-02-08 22:26:08,152 [INFO] ✅ NSE:YESBANK-EQ       | CVD Ref (1st 16 c): 2253094 | FRVP VAH:      N/A
+2026-02-08 22:26:08,153 [INFO] ==================================================
+
+2026-02-08 22:26:08,154 [INFO] 🚀 Buy Alert Monitoring Started...
+2026-02-08 22:26:08,154 [INFO] 🔍 Scanning for alerts on 16 symbols (5min)...
+2026-02-08 22:26:19,604 [INFO] 👋  Buy Alert Monitoring stopped by user.
+2026-02-08 22:26:23,663 [INFO] ==================================================
+2026-02-08 22:26:23,664 [INFO] 🚀 INITIALIZING STRATEGY ALERTS (5min)
+2026-02-08 22:26:23,664 [INFO] ==================================================
+2026-02-08 22:26:23,664 [INFO] 📅 FRVP Configuration:
+2026-02-08 22:26:23,664 [INFO]    • Range: 09:15 - 10:25
+2026-02-08 22:26:23,665 [INFO]    • Rows: 24 | VA%: 70
+2026-02-08 22:26:23,665 [INFO] 
+🌊 CVD Configuration:
+2026-02-08 22:26:23,665 [INFO]    • Anchor: D
+2026-02-08 22:26:23,666 [INFO]    • Ref Candles: First 16 candles of the day
+2026-02-08 22:26:23,666 [INFO] --------------------------------------------------
+2026-02-08 22:26:23,666 [INFO] ⏳ calculating reference levels for all symbols...
+2026-02-08 22:26:23,779 [INFO] ✅ NSE:POLYCAB-EQ       | CVD Ref (1st 16 c):   4240 | FRVP VAH:      N/A
+2026-02-08 22:26:23,888 [INFO] ✅ NSE:TRENT-EQ         | CVD Ref (1st 16 c):  25869 | FRVP VAH:      N/A
+2026-02-08 22:26:23,978 [INFO] ✅ NSE:SIEMENS-EQ       | CVD Ref (1st 16 c):  14317 | FRVP VAH:      N/A
+2026-02-08 22:26:24,092 [INFO] ✅ NSE:BSE-EQ           | CVD Ref (1st 16 c): 222871 | FRVP VAH:      N/A
+2026-02-08 22:26:24,191 [INFO] ✅ NSE:HDFCAMC-EQ       | CVD Ref (1st 16 c):  10918 | FRVP VAH:      N/A
+2026-02-08 22:26:24,296 [INFO] ✅ NSE:APLAPOLLO-EQ     | CVD Ref (1st 16 c): 178889 | FRVP VAH:      N/A
+2026-02-08 22:26:24,401 [INFO] ✅ NSE:HINDPETRO-EQ     | CVD Ref (1st 16 c):  11135 | FRVP VAH:      N/A
+2026-02-08 22:26:24,502 [INFO] ✅ NSE:COALINDIA-EQ     | CVD Ref (1st 16 c): 147141 | FRVP VAH:      N/A
+2026-02-08 22:26:24,603 [INFO] ✅ NSE:BPCL-EQ          | CVD Ref (1st 16 c): 192975 | FRVP VAH:      N/A
+2026-02-08 22:26:24,716 [INFO] ✅ NSE:NATIONALUM-EQ    | CVD Ref (1st 16 c): 780207 | FRVP VAH:      N/A
+2026-02-08 22:26:24,820 [INFO] ✅ NSE:TATAPOWER-EQ     | CVD Ref (1st 16 c): 129596 | FRVP VAH:      N/A
+2026-02-08 22:26:24,932 [INFO] ✅ NSE:EXIDEIND-EQ      | CVD Ref (1st 16 c):  76210 | FRVP VAH:      N/A
+2026-02-08 22:26:25,043 [INFO] ✅ NSE:ONGC-EQ          | CVD Ref (1st 16 c): 613554 | FRVP VAH:      N/A
+2026-02-08 22:26:25,139 [INFO] ✅ NSE:ASHOKLEY-EQ      | CVD Ref (1st 16 c): 434225 | FRVP VAH:      N/A
+2026-02-08 22:26:25,230 [INFO] ✅ NSE:IOC-EQ           | CVD Ref (1st 16 c): 379707 | FRVP VAH:      N/A
+2026-02-08 22:26:25,333 [INFO] ✅ NSE:YESBANK-EQ       | CVD Ref (1st 16 c): 2253094 | FRVP VAH:      N/A
+2026-02-08 22:26:25,334 [INFO] ==================================================
+
+2026-02-08 22:26:25,334 [INFO] 🚀 Buy Alert Monitoring Started...
+2026-02-08 22:26:25,335 [INFO] 🔍 Scanning for alerts on 16 symbols (5min)...
+2026-02-08 22:26:50,014 [INFO] 👋  Buy Alert Monitoring stopped by user.

@@ -35,3 +35,10 @@
 {"level":"ERROR","location":"[subscribe:482] order_ws","message":"'OnPosition'","timestamp":"2026-02-03 10:37:45,900+0530","service":"FyersDataSocket"}
 {"level":"ERROR","location":"[On_error:261] order_ws","message":"Connection to remote host was lost.","timestamp":"2026-02-03 17:33:38,316+0530","service":"FyersDataSocket"}
 {"level":"ERROR","location":"[On_error:261] order_ws","message":"Connection to remote host was lost.","timestamp":"2026-02-06 15:54:41,409+0530","service":"FyersDataSocket"}
+{"level":"ERROR","location":"[On_error:261] order_ws","message":"Connection to remote host was lost.","timestamp":"2026-02-09 14:31:20,610+0530","service":"FyersDataSocket"}
+{"level":"ERROR","location":"[On_error:261] order_ws","message":"[Errno 11001] getaddrinfo failed","timestamp":"2026-02-09 14:31:25,624+0530","service":"FyersDataSocket"}
+{"level":"ERROR","location":"[On_error:261] order_ws","message":"[Errno 11001] getaddrinfo failed","timestamp":"2026-02-09 14:31:30,627+0530","service":"FyersDataSocket"}
+{"level":"ERROR","location":"[On_error:261] order_ws","message":"[Errno 11001] getaddrinfo failed","timestamp":"2026-02-09 14:31:35,631+0530","service":"FyersDataSocket"}
+{"level":"ERROR","location":"[On_error:261] order_ws","message":"[Errno 11001] getaddrinfo failed","timestamp":"2026-02-09 14:31:40,633+0530","service":"FyersDataSocket"}
+{"level":"ERROR","location":"[On_error:261] order_ws","message":"[Errno 11001] getaddrinfo failed","timestamp":"2026-02-09 14:31:56,697+0530","service":"FyersDataSocket"}
+{"level":"ERROR","location":"[On_error:261] order_ws","message":"Connection to remote host was lost.","timestamp":"2026-02-10 12:56:30,600+0530","service":"FyersDataSocket"}

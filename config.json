@@ -21,14 +21,14 @@
             "sig": 9
         },
         "cvd": {
-            "visible": false,
+            "visible": true,
             "anchor": "D",
             "refCandles": 16,
             "showHighRef": true,
             "showLowRef": true
         },
         "cmf": {
-            "visible": true,
+            "visible": false,
             "len": 20
         },
         "vwap": {
@@ -65,66 +65,36 @@
         }
     },
     "default_tf": "5min",
-    "default_symbol": "NSE:NATIONALUM-EQ",
+    "default_symbol": "NSE:M&M-EQ",
     "watchlist": [
         {
-            "symbol": "NSE:OFSS-EQ",
+            "symbol": "NSE:ASHOKLEY-EQ",
             "alert_times": [
                 "12:31"
             ]
         },
         {
-            "symbol": "NSE:HUDCO-EQ",
+            "symbol": "NSE:BPCL-EQ",
             "alert_times": [
                 "10:37"
             ]
         },
         {
-            "symbol": "NSE:BHEL-EQ",
+            "symbol": "NSE:FORTIS-EQ",
             "alert_times": [
                 "10:37"
             ]
         },
         {
-            "symbol": "NSE:DRREDDY-EQ",
+            "symbol": "NSE:MAXHEALTH-EQ",
             "alert_times": [
                 "10:36"
             ]
         },
         {
-            "symbol": "NSE:TATATECH-EQ",
+            "symbol": "NSE:M&M-EQ",
             "alert_times": [
-                "10:34"
-            ]
-        },
-        {
-            "symbol": "NSE:TATAELXSI-EQ",
-            "alert_times": [
-                "10:34"
-            ]
-        },
-        {
-            "symbol": "NSE:SOLARINDS-EQ",
-            "alert_times": [
-                "10:34"
-            ]
-        },
-        {
-            "symbol": "NSE:NATIONALUM-EQ",
-            "alert_times": [
-                "10:37"
-            ]
-        },
-        {
-            "symbol": "NSE:IEX-EQ",
-            "alert_times": [
-                "10:37"
-            ]
-        },
-        {
-            "symbol": "NSE:IDEA-EQ",
-            "alert_times": [
-                "10:37"
+                "10:36"
             ]
         }
     ]

@@ -1,0 +1,19 @@
+2026-02-11 11:10:04,884 [EXIT] 🚨 [EXIT TRIGGER] NSE:M&M-EQ (LONG) | ROC: -0.0372 <= 0 | Candle Time: 11:00
+2026-02-11 11:10:04,914 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:M&M-EQ | Side: LONG | Qty: 23 | Order ID: 26021100160985-BO-1
+2026-02-11 11:10:08,807 [EXIT] Exit Response for NSE:M&M-EQ: {'code': -52, 'message': 'Not a pending order', 's': 'error', 'id': '26021100160985'}
+2026-02-11 11:40:04,036 [EXIT] 🚨 [EXIT TRIGGER] NSE:M&M-EQ (LONG) | ROC: -0.0768 <= 0 | Candle Time: 11:35
+2026-02-11 11:40:04,037 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:M&M-EQ | Side: LONG | Qty: 23 | Order ID: 26021100160985-BO-1
+2026-02-11 11:40:05,085 [EXIT] Exit Response for NSE:M&M-EQ: {'code': -52, 'message': 'Not a pending order', 's': 'error', 'id': '26021100160985'}
+2026-02-11 11:45:05,771 [EXIT] 🚨 [EXIT TRIGGER] NSE:M&M-EQ (LONG) | ROC: -0.0239 <= 0 | Candle Time: 11:40
+2026-02-11 11:45:05,773 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:M&M-EQ | Side: LONG | Qty: 23 | Order ID: 26021100160985-BO-1
+2026-02-11 11:45:06,950 [EXIT] Exit Response for NSE:M&M-EQ: {'code': -52, 'message': 'Not a pending order', 's': 'error', 'id': '26021100160985'}
+2026-02-11 11:45:07,057 [EXIT] 🚨 [EXIT TRIGGER] NSE:ASHOKLEY-EQ (LONG) | ROC: -0.0327 <= 0 | Candle Time: 11:40
+2026-02-11 11:45:07,057 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:ASHOKLEY-EQ | Side: LONG | Qty: 419 | Order ID: 26021100179449-BO-3
+2026-02-11 11:45:08,137 [EXIT] Exit Response for NSE:ASHOKLEY-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26021100179449-BO-3'}
+2026-02-11 11:45:08,180 [EXIT] ✅ DB Updated: NSE:ASHOKLEY-EQ marked as squared off.
+2026-02-11 12:50:06,613 [EXIT] 🚨 [EXIT TRIGGER] NSE:RELIANCE-EQ (LONG) | ROC: -0.0750 <= 0 | Candle Time: 12:35
+2026-02-11 12:50:06,782 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:RELIANCE-EQ | Side: LONG | Qty: 2 | Order ID: 26021100203247-BO-3
+2026-02-11 12:55:13,498 [EXIT] 🚨 [EXIT TRIGGER] NSE:RELIANCE-EQ (LONG) | ROC: -0.0546 <= 0 | Candle Time: 12:40
+2026-02-11 12:55:13,730 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:RELIANCE-EQ | Side: LONG | Qty: 2 | Order ID: 26021100203247-BO-3
+2026-02-11 12:55:24,760 [EXIT] Exit Response for NSE:RELIANCE-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26021100203247-BO-3'}
+2026-02-11 12:55:24,972 [EXIT] ✅ DB Updated: NSE:RELIANCE-EQ marked as squared off.

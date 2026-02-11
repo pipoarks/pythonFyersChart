@@ -51,68 +51,11 @@ alert_logger.addHandler(alert_sh)
 TIMEFRAME = "5min"
 
 SYMBOLS = [  
-
-"NSE:POLYCAB-EQ",
-  
-  
-  
-"NSE:TRENT-EQ",
-  
-  
-  
-"NSE:SIEMENS-EQ",
-  
-  
-  
-"NSE:BSE-EQ",
-  
-  
-  
-"NSE:HDFCAMC-EQ",
-  
-  
-  
-"NSE:APLAPOLLO-EQ",
-  
-  
-  
-"NSE:HINDPETRO-EQ",
-  
-  
-  
-"NSE:COALINDIA-EQ",
-  
-  
-  
-"NSE:BPCL-EQ",
-  
-  
-  
-"NSE:NATIONALUM-EQ",
-  
-  
-  
-"NSE:TATAPOWER-EQ",
-  
-  
-  
-"NSE:EXIDEIND-EQ",
-  
-  
-  
-"NSE:ONGC-EQ",
-  
-  
-  
-"NSE:ASHOKLEY-EQ",
-  
-  
-  
-"NSE:IOC-EQ",
-  
-  
-  
-"NSE:YESBANK-EQ"
+      "NSE:MAXHEALTH-EQ",
+    "NSE:FORTIS-EQ",
+    "NSE:BPCL-EQ",
+    "NSE:ASHOKLEY-EQ",
+    "NSE:M&M-EQ"
 ]
 
 # State to track alerts and prevent repeated notifications for the same candle

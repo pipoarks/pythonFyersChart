@@ -1,0 +1,20 @@
+2026-02-10 10:41:38,408 [EXIT] 🚨 [EXIT TRIGGER] NSE:AMBER-EQ (LONG) | ROC: 0.7876 <= 1 | Time: 10:35
+2026-02-10 10:41:38,410 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:AMBER-EQ | Side: LONG | Qty: 6 | Order ID: 26021000153995-BO-2
+2026-02-10 10:41:38,969 [EXIT] Exit Response for NSE:AMBER-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26021000153995-BO-2'}
+2026-02-10 10:41:39,012 [EXIT] ✅ DB Updated: NSE:AMBER-EQ marked as squared off.
+2026-02-10 10:56:39,090 [EXIT] 🚨 [EXIT TRIGGER] NSE:ETERNAL-EQ (LONG) | ROC: 0.3029 <= 1 | Time: 10:50
+2026-02-10 10:56:39,091 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:ETERNAL-EQ | Side: LONG | Qty: 167 | Order ID: 26021000169153-BO-2
+2026-02-10 10:56:39,628 [EXIT] Exit Response for NSE:ETERNAL-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26021000169153-BO-2'}
+2026-02-10 10:56:39,689 [EXIT] ✅ DB Updated: NSE:ETERNAL-EQ marked as squared off.
+2026-02-10 11:15:08,119 [EXIT] 🚨 [EXIT TRIGGER] NSE:ETERNAL-EQ (LONG) | ROC: 0.2516 <= 1 | Candle Time: 11:05
+2026-02-10 11:15:08,120 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:ETERNAL-EQ | Side: LONG | Qty: 167 | Order ID: 26021000180589-BO-3
+2026-02-10 11:15:08,988 [EXIT] Exit Response for NSE:ETERNAL-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26021000180589-BO-3'}
+2026-02-10 11:15:09,054 [EXIT] ✅ DB Updated: NSE:ETERNAL-EQ marked as squared off.
+2026-02-10 11:15:09,169 [EXIT] 🚨 [EXIT TRIGGER] NSE:EICHERMOT-EQ (LONG) | ROC: 0.5726 <= 1 | Candle Time: 11:05
+2026-02-10 11:15:09,169 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:EICHERMOT-EQ | Side: LONG | Qty: 6 | Order ID: 26021000180984-BO-2
+2026-02-10 11:15:10,013 [EXIT] Exit Response for NSE:EICHERMOT-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26021000180984-BO-2'}
+2026-02-10 11:15:10,054 [EXIT] ✅ DB Updated: NSE:EICHERMOT-EQ marked as squared off.
+2026-02-10 13:15:09,046 [EXIT] 🚨 [EXIT TRIGGER] NSE:YESBANK-EQ (LONG) | ROC: -0.0465 <= 0 | Candle Time: 13:05
+2026-02-10 13:15:09,046 [EXIT] ⚠️ [EXIT ATTEMPT] Sending Square-off request for NSE:YESBANK-EQ | Side: LONG | Qty: 10 | Order ID: 26021000277797-BO-2
+2026-02-10 13:15:09,718 [EXIT] Exit Response for NSE:YESBANK-EQ: {'code': 1103, 'message': 'Successfully cancelled order', 's': 'ok', 'id': '26021000277797-BO-2'}
+2026-02-10 13:15:09,754 [EXIT] ✅ DB Updated: NSE:YESBANK-EQ marked as squared off.
